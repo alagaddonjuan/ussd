@@ -124,4 +124,31 @@ class Client extends Authenticatable
 
         return $record ? (float) $record->price : $default;
     }
+
+    /**
+     * Resolve the USSD billing multiplier applied to Africa's Talking costs.
+     */
+    public function getUssdCostMultiplier(): float
+    {
+        $defaultMultiplier = (float) config('services.ussd.cost_multiplier', 4.0);
+        $tierName = strtolower(trim((string) ($this->pricingTier?->tier_name ?? '')));
+
+        if ($tierName === '') {
+            return $defaultMultiplier;
+        }
+
+        if (str_contains($tierName, 'max') || str_contains($tierName, 'platinum')) {
+            return 2.5;
+        }
+
+        if (str_contains($tierName, 'premium')) {
+            return 2.9;
+        }
+
+        if (str_contains($tierName, 'plus') && ! str_contains($tierName, 'basic')) {
+            return 3.5;
+        }
+
+        return $defaultMultiplier;
+    }
 }

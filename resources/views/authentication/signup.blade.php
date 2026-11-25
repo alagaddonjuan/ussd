@@ -14,8 +14,8 @@
         <img src="{{ asset('assets/images/ellipse1.png') }}" class="absolute top-16 md:top-5 ltr:right-10 rtl:left-10" alt="ellipse" />
         <img src="{{ asset('assets/images/ellipse2.png') }}" class="absolute bottom-6 ltr:left-0 rtl:right-0 ltr:sm:left-32 rtl:sm:right-32" alt="ellipse" />
 
-        <a href="{{ route('home') }}" class="inline-block p-6 lg:p-8 relative z-10">
-            <img src="{{ asset('assets/images/logo-with-text-dark.png') }}" alt="{{ config('app.name') }}" class="h-9" />
+        <a href="{{ route('home') }}" class="inline-flex items-center gap-3 p-6 lg:p-8 relative z-10">
+            <img src="{{ asset('assets/images/q4-logo.png') }}" alt="Q4 International" class="h-11 w-auto object-contain" />
         </a>
 
         <div class="flex items-center justify-center mt-4">

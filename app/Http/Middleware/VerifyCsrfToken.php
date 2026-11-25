@@ -8,7 +8,10 @@ class VerifyCsrfToken extends Middleware
 {
     protected $except = [
         'ussd',
+        'ussd/*',
         'ussd_callback',
+        'api/ussd',
+        'api/ussd/*',
         'api/v1/ussd',
         'api/v1/ussd/*',
         'billing/webhook',

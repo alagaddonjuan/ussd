@@ -281,3 +281,155 @@
 #layout li {
     @apply block cursor-pointer select-none rounded-md p-2 duration-300 hover:text-primary;
 }
+
+/* ==========================================================================
+   Q4 International — Frosted Glassmorphism Theme (Light & Dark Modes)
+   ========================================================================== */
+body {
+    background-color: #eef6fb;
+    background-image:
+        radial-gradient(at 8% 12%, rgba(25, 184, 150, 0.18) 0px, transparent 48%),
+        radial-gradient(at 90% 8%, rgba(67, 113, 233, 0.14) 0px, transparent 46%),
+        radial-gradient(at 78% 88%, rgba(18, 125, 102, 0.13) 0px, transparent 50%),
+        linear-gradient(135deg, #f2f8ff 0%, #e7f6f3 50%, #edf4ff 100%);
+    background-attachment: fixed;
+}
+
+.dark body {
+    background-color: #07111e;
+    background-image:
+        radial-gradient(at 10% 14%, rgba(25, 184, 150, 0.22) 0px, transparent 50%),
+        radial-gradient(at 88% 10%, rgba(67, 113, 233, 0.18) 0px, transparent 48%),
+        radial-gradient(at 76% 88%, rgba(13, 90, 81, 0.24) 0px, transparent 52%),
+        linear-gradient(135deg, #07111e 0%, #0b1829 55%, #091d22 100%);
+    background-attachment: fixed;
+}
+
+.box,
+.box.bg-n0,
+.white-box,
+.glass-card {
+    background: rgba(255, 255, 255, 0.68) !important;
+    backdrop-filter: blur(18px) saturate(155%);
+    -webkit-backdrop-filter: blur(18px) saturate(155%);
+    border: 1px solid rgba(255, 255, 255, 0.78) !important;
+    box-shadow:
+        0 10px 34px -8px rgba(13, 90, 81, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.dark .box,
+.dark .box.bg-n0,
+.dark .white-box,
+.dark .glass-card {
+    background: rgba(15, 28, 48, 0.66) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow:
+        0 12px 38px -8px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.box .box {
+    background: rgba(255, 255, 255, 0.52) !important;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+.dark .box .box {
+    background: rgba(22, 38, 64, 0.56) !important;
+}
+
+.sidebar,
+.glass-sidebar {
+    background: rgba(255, 255, 255, 0.72) !important;
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border-color: rgba(255, 255, 255, 0.70) !important;
+    box-shadow: 6px 0 28px rgba(13, 90, 81, 0.06);
+}
+
+.dark .sidebar,
+.dark .glass-sidebar {
+    background: rgba(11, 22, 39, 0.76) !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+    box-shadow: 6px 0 32px rgba(0, 0, 0, 0.45);
+}
+
+.sidebar .menu-li {
+    background: transparent !important;
+}
+
+.navbar-top,
+.glass-nav {
+    background: rgba(255, 255, 255, 0.68) !important;
+    backdrop-filter: blur(18px) saturate(155%);
+    -webkit-backdrop-filter: blur(18px) saturate(155%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.72) !important;
+    box-shadow: 0 6px 24px rgba(13, 90, 81, 0.06);
+}
+
+.dark .navbar-top,
+.dark .glass-nav {
+    background: rgba(11, 22, 39, 0.74) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.footer,
+.glass-footer {
+    background: rgba(255, 255, 255, 0.66) !important;
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    border-top: 1px solid rgba(255, 255, 255, 0.72) !important;
+}
+
+.dark .footer,
+.dark .glass-footer {
+    background: rgba(11, 22, 39, 0.74) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.glass-dropdown,
+.sidebar .submenu {
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.82);
+}
+
+.dark .glass-dropdown,
+.dark .sidebar .submenu {
+    background: rgba(15, 28, 48, 0.90) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+body.vertical .sidebar .submenu,
+body.hovered .sidebar .submenu {
+    background: transparent !important;
+    border: none !important;
+    backdrop-filter: none !important;
+}
+
+.glass-pill {
+    background: rgba(255, 255, 255, 0.56);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+}
+
+.dark .glass-pill {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.topbar-btn {
+    background: rgba(255, 255, 255, 0.56) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
+}
+
+.dark .topbar-btn {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+}

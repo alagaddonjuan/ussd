@@ -96,4 +96,35 @@ class AuthAndTwoFactorTest extends TestCase
         $client->refresh();
         $this->assertTrue(Hash::check('NewPass123!', $client->password));
     }
+
+    public function test_admin_legacy_52_char_speakeasy_2fa_secret_verifies_without_500(): void
+    {
+        $legacySecret = 'LBKVWNSQKMSGO22XHZ2XWNRRI5UGI2DUK5KCKY3UNUZDSPTEGRWQ';
+        $g2fa = new Google2FA();
+        $g2fa->setEnforceGoogleAuthenticatorCompatibility(false);
+
+        $admin = Client::create([
+            'name' => 'Q4 Admin',
+            'email' => 'admin2fa@q4iltd.com',
+            'password' => Hash::make('AdminPass123!'),
+            'is_admin' => true,
+            'is_2fa_enabled' => true,
+            'two_fa_secret' => $legacySecret,
+            'status' => 'active',
+        ]);
+
+        $loginRes = $this->post('/login', [
+            'email' => 'admin2fa@q4iltd.com',
+            'password' => 'AdminPass123!',
+        ]);
+        $loginRes->assertRedirect('/auth/2fa');
+        $this->assertGuest();
+
+        $this->get('/auth/2fa')->assertOk()->assertSee('q4-logo.png');
+
+        $otp = $g2fa->getCurrentOtp($legacySecret);
+        $verifyRes = $this->post('/auth/2fa', ['code' => $otp]);
+        $verifyRes->assertRedirect('/admin/dashboard');
+        $this->assertAuthenticatedAs($admin);
+    }
 }

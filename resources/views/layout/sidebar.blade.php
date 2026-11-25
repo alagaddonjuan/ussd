@@ -1,19 +1,19 @@
 @php
     $authUser = auth()->user();
 @endphp
-<aside id="sidebar" class="sidebar bg-n0">
+<aside id="sidebar" class="sidebar glass-sidebar">
     <div class="sidebar-inner relative">
         <div class="logo-column">
             <div class="logo-container">
                 <div class="logo-inner">
                     <a href="{{ $authUser?->isAdmin() ? route('admin.dashboard') : route('dashboard') }}" class="logo-wrapper flex items-center gap-2">
-                        <img src="{{ asset('assets/images/logo-with-text.png') }}" width="174" height="38"
-                            class="logo-full" alt="Q4I Comms" />
-                        <img src="{{ asset('assets/images/logo.png') }}" width="37" height="36" class="logo-icon hidden"
-                            alt="Q4I" />
+                        <img src="{{ asset('assets/images/q4-logo.png') }}"
+                            class="logo-full h-10 w-auto max-w-[165px] object-contain" alt="Q4 International" />
+                        <img src="{{ asset('assets/images/q4-logo.png') }}" class="logo-icon hidden h-8 w-auto max-w-[64px] object-contain"
+                            alt="Q4 International" />
                     </a>
-                    <img width="141" height="38" class="logo-text hidden"
-                        src="{{ asset('assets/images/logo-text.png') }}" alt="Q4I Comms" />
+                    <img class="logo-text hidden h-9 w-auto max-w-[140px] object-contain"
+                        src="{{ asset('assets/images/q4-logo.png') }}" alt="Q4 International" />
                     <button type="button" class="sidebar-close-btn xl:hidden" id="sidebar-close-btn" aria-label="Close sidebar">
                         <i class="las la-times"></i>
                     </button>

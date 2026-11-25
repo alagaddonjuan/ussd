@@ -48,6 +48,7 @@ return [
     'ussd' => [
         'modern_lottery_url' => env('MODERN_LOTTERY_USSD_URL', 'https://api.modernlotterynigeria.com/9999/bettingW/ussd/callback'),
         'default_cost' => (float) env('USSD_DEFAULT_COST', 3.50),
+        'cost_multiplier' => (float) env('USSD_COST_MULTIPLIER', 4.0),
     ],
 
 ];

@@ -1,12 +1,12 @@
 @php
     $authUser = auth()->user();
 @endphp
-<nav class="navbar-top topbarfull z-20 gap-3 bg-n0 py-3 shadow-sm duration-300 border-b border-n0" id="topbar">
+<nav class="navbar-top glass-nav topbarfull z-20 gap-3 py-3 duration-300" id="topbar">
     <div class="topbar-inner flex items-center justify-between">
         <div class="flex grow items-center gap-4 xxl:gap-6">
             <a href="{{ $authUser?->isAdmin() ? route('admin.dashboard') : route('dashboard') }}" class="topbar-logo hidden shrink-0">
-                <img width="174" height="38" src="{{ asset('assets/images/logo-with-text.png') }}" alt="logo"
-                    class="logo-full2 hidden lg:block" />
+                <img src="{{ asset('assets/images/q4-logo.png') }}" alt="Q4 International"
+                    class="logo-full2 hidden h-9 w-auto max-w-[160px] object-contain lg:block" />
             </a>
             <button type="button" class="flex items-center rounded-s-2xl bg-primary px-0.5 py-3 text-xl text-white"
                 id="sidebar-toggle-btn" aria-label="Toggle sidebar">
@@ -15,7 +15,7 @@
 
             <div class="topnav-layout">
                 <div id="layout-btn"
-                    class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-[30px] border border-n30 bg-primary/5 px-4 py-1 lg:py-1.5 xxl:px-6 xxl:py-2">
+                    class="glass-pill flex w-full cursor-pointer items-center justify-between gap-2 rounded-[30px] px-4 py-1 lg:py-1.5 xxl:px-6 xxl:py-2">
                     <span class="flex select-none items-center gap-2">
                         <i class="las la-border-all text-3xl text-primary"></i>
                         <span id="selected-layout" class="capitalize">Vertical</span>
@@ -23,7 +23,7 @@
                     <i id="drop-arrow" class="las la-angle-down shrink-0 text-lg duration-300"></i>
                 </div>
                 <ul id="layout"
-                    class="hide absolute left-0 top-full z-20 w-full origin-top rounded-lg bg-n0 p-2 shadow-[0px_6px_30px_0px_rgba(0,0,0,0.08)] duration-300">
+                    class="hide glass-dropdown absolute left-0 top-full z-20 w-full origin-top rounded-xl p-2 shadow-[0px_10px_35px_0px_rgba(0,0,0,0.12)] duration-300">
                     <li data-layout="vertical" class="active block cursor-pointer select-none rounded-md p-2 duration-300 hover:text-primary">Vertical</li>
                     <li data-layout="two-column" class="block cursor-pointer select-none rounded-md p-2 duration-300 hover:text-primary">Two-Column</li>
                     <li data-layout="hovered" class="block cursor-pointer select-none rounded-md p-2 duration-300 hover:text-primary">Hovered</li>
@@ -32,7 +32,7 @@
                 </ul>
             </div>
 
-            <div class="hidden md:flex items-center gap-2 rounded-[30px] border border-n30 bg-primary/5 px-4 py-2 text-sm">
+            <div class="glass-pill hidden md:flex items-center gap-2 rounded-[30px] px-4 py-2 text-sm">
                 <span class="text-n100">USSD Code:</span>
                 <span class="font-semibold text-primary">{{ $authUser?->ussd_code ?: 'Unassigned' }}</span>
                 <span class="mx-2 text-n40">|</span>
@@ -49,7 +49,7 @@
                     <i class="las la-wallet"></i>
                 </button>
                 <div id="mobile-search"
-                    class="hide invisible absolute -left-8 top-full z-20 flex min-w-max max-w-[260px] origin-[20%_20%] flex-col gap-1 rounded-md bg-n0 p-3 opacity-0 shadow-[0px_6px_30px_0px_rgba(0,0,0,0.08)] duration-300">
+                    class="hide glass-dropdown invisible absolute -left-8 top-full z-20 flex min-w-max max-w-[260px] origin-[20%_20%] flex-col gap-1 rounded-xl p-3 opacity-0 shadow-[0px_10px_35px_0px_rgba(0,0,0,0.12)] duration-300">
                     <span class="text-xs text-n100">Balance</span>
                     <span class="font-semibold text-primary">₦{{ number_format((float) ($authUser?->token_balance ?? 0), 2) }}</span>
                     <span class="text-xs text-n100">USSD: {{ $authUser?->ussd_code ?: 'Unassigned' }}</span>
@@ -71,7 +71,7 @@
                     </div>
                 </div>
                 <div id="profile"
-                    class="hide absolute top-full z-20 rounded-md bg-n0 shadow-[0px_6px_30px_0px_rgba(0,0,0,0.08)] duration-300 ltr:right-0 ltr:origin-top-right rtl:left-0 rtl:origin-top-left">
+                    class="hide glass-dropdown absolute top-full z-20 rounded-xl shadow-[0px_10px_35px_0px_rgba(0,0,0,0.12)] duration-300 ltr:right-0 ltr:origin-top-right rtl:left-0 rtl:origin-top-left">
                     <div class="flex flex-col items-center border-b border-n40 p-3 text-center lg:p-4">
                         <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white text-lg font-bold">
                             {{ strtoupper(substr($authUser?->name ?? 'Q', 0, 1)) }}

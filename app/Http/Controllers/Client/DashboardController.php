@@ -20,7 +20,11 @@ class DashboardController extends Controller
         $totalUssd = UssdLog::query()->where('client_id', $client->id)->count();
         $totalAirtime = $client->airtimeLogs()->count();
         $smsRate = $client->getServicePrice('SMS', 3.50);
-        $ussdRate = $client->getServicePrice('USSD', 3.50);
+        $ussdMultiplier = $client->getUssdCostMultiplier();
+        $ussdRate = $client->getServicePrice(
+            'USSD',
+            round((float) config('services.ussd.default_cost', 3.50) * $ussdMultiplier, 2)
+        );
 
         $labels = [];
         $ussdSeries = [];
@@ -69,6 +73,7 @@ class DashboardController extends Controller
             'totalAirtime',
             'smsRate',
             'ussdRate',
+            'ussdMultiplier',
             'labels',
             'ussdSeries',
             'smsSeries',

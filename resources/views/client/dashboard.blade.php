@@ -37,7 +37,10 @@
                 <span class="flex size-9 items-center justify-center rounded-full bg-secondary/10 text-secondary"><i class="las la-phone-volume"></i></span>
             </div>
             <h4 class="h4 mb-2">{{ number_format($totalUssd) }}</h4>
-            <span class="text-xs text-n100">Tier USSD Rate: ₦{{ number_format($ussdRate, 2) }}</span>
+            <span class="text-xs text-n100">
+                USSD AT Multiplier: <strong class="text-primary">{{ rtrim(rtrim(number_format($ussdMultiplier, 2), '0'), '.') }}x</strong>
+                · Rate: ₦{{ number_format($ussdRate, 2) }}
+            </span>
         </div>
 
         <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30">

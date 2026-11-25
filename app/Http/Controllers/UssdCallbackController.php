@@ -17,14 +17,17 @@ class UssdCallbackController extends Controller
             ->header('Content-Type', 'text/plain; charset=UTF-8');
     }
 
-    public function events(Request $request): Response
+    public function events(Request $request, UssdEngineService $engine): Response
     {
         Log::info('USSD event callback received', [
             'phoneNumber' => $request->input('phoneNumber'),
             'status' => $request->input('status'),
             'sessionId' => $request->input('sessionId'),
             'durationInMillis' => $request->input('durationInMillis'),
+            'cost' => $request->input('cost'),
         ]);
+
+        $engine->reconcileEventCost($request->all());
 
         return response('OK', 200)
             ->header('Content-Type', 'text/plain; charset=UTF-8');

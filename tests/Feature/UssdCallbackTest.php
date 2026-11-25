@@ -169,4 +169,133 @@ class UssdCallbackTest extends TestCase
         $res->assertOk();
         $this->assertSame('END Error: USSD Code not recognized.', $res->getContent());
     }
+
+    public function test_africas_talking_ussd_cost_is_multiplied_by_tier_factor_and_reconciled(): void
+    {
+        $basicTier = PricingTier::create(['tier_name' => 'Basic Plan']);
+        $plusTier = PricingTier::create(['tier_name' => 'Plus Plan']);
+        $premiumTier = PricingTier::create(['tier_name' => 'Premium Plan']);
+        $maxTier = PricingTier::create(['tier_name' => 'Max Plan']);
+
+        // Basic (4x): hop charges provisional default (3.50 * 4 = 14.00), then AT /events reconciles "NGN 3.00" * 4 = 12.00
+        $basicClient = Client::create([
+            'name' => 'Basic Client',
+            'email' => 'basic@example.com',
+            'password' => Hash::make('secret123'),
+            'ussd_code' => '*347*201#',
+            'token_balance' => 100.00,
+            'status' => 'active',
+            'pricing_tier_id' => $basicTier->id,
+        ]);
+        $menu = UssdMenu::create([
+            'client_id' => $basicClient->id,
+            'menu_name' => 'Basic Menu',
+            'is_active' => true,
+            'is_archived' => false,
+        ]);
+        UssdMenuItem::create([
+            'menu_id' => $menu->id,
+            'parent_item_id' => null,
+            'option_trigger' => 'ROOT',
+            'response_type' => 'END',
+            'response_text' => 'Thank you',
+        ]);
+
+        $this->post('/ussd', [
+            'sessionId' => 'AT-BASIC-1',
+            'serviceCode' => '*347*201#',
+            'phoneNumber' => '+2348011110001',
+            'text' => '',
+        ])->assertOk();
+
+        $basicClient->refresh();
+        $this->assertEquals(86.00, $basicClient->token_balance);
+
+        $this->post('/api/v1/ussd/events', [
+            'sessionId' => 'AT-BASIC-1',
+            'serviceCode' => '*347*201#',
+            'phoneNumber' => '+2348011110001',
+            'status' => 'Success',
+            'cost' => 'NGN 3.00',
+        ])->assertOk();
+
+        $basicClient->refresh();
+        $this->assertEquals(88.00, $basicClient->token_balance);
+        $this->assertDatabaseHas('ussd_logs', [
+            'client_id' => $basicClient->id,
+            'session_id' => 'AT-BASIC-1',
+            'cost' => 12.00,
+            'client_price' => 12.00,
+        ]);
+
+        // Duplicate webhook stays idempotent
+        $this->post('/api/v1/ussd/events', [
+            'sessionId' => 'AT-BASIC-1',
+            'serviceCode' => '*347*201#',
+            'status' => 'Success',
+            'cost' => 'NGN 3.00',
+        ])->assertOk();
+        $basicClient->refresh();
+        $this->assertEquals(88.00, $basicClient->token_balance);
+
+        // Plus (3.5x), Premium (2.9x), Max (2.5x)
+        $plusClient = Client::create([
+            'name' => 'Plus Client',
+            'email' => 'plus@example.com',
+            'password' => Hash::make('secret123'),
+            'ussd_code' => '*347*202#',
+            'token_balance' => 100.00,
+            'status' => 'active',
+            'pricing_tier_id' => $plusTier->id,
+        ]);
+        $plusMenu = UssdMenu::create(['client_id' => $plusClient->id, 'menu_name' => 'Plus', 'is_active' => true, 'is_archived' => false]);
+        UssdMenuItem::create(['menu_id' => $plusMenu->id, 'option_trigger' => 'ROOT', 'response_type' => 'END', 'response_text' => 'Hi']);
+        $this->post('/ussd', [
+            'sessionId' => 'AT-PLUS-1',
+            'serviceCode' => '*347*202#',
+            'phoneNumber' => '+2348011110002',
+            'text' => '',
+            'cost' => 'NGN 4.00',
+        ])->assertOk();
+        $plusClient->refresh();
+        $this->assertEquals(86.00, $plusClient->token_balance); // 100 - (4 * 3.5 = 14)
+
+        $premiumClient = Client::create([
+            'name' => 'Premium Client',
+            'email' => 'premium@example.com',
+            'password' => Hash::make('secret123'),
+            'ussd_code' => '*347*203#',
+            'token_balance' => 100.00,
+            'status' => 'active',
+            'pricing_tier_id' => $premiumTier->id,
+        ]);
+        $this->post('/api/v1/ussd/events', [
+            'sessionId' => 'AT-PREM-1',
+            'serviceCode' => '*347*203#',
+            'phoneNumber' => '+2348011110003',
+            'status' => 'Success',
+            'cost' => 'NGN 10.00',
+        ])->assertOk();
+        $premiumClient->refresh();
+        $this->assertEquals(71.00, $premiumClient->token_balance); // 100 - (10 * 2.9 = 29)
+
+        $maxClient = Client::create([
+            'name' => 'Max Client',
+            'email' => 'max@example.com',
+            'password' => Hash::make('secret123'),
+            'ussd_code' => '*347*204#',
+            'token_balance' => 100.00,
+            'status' => 'active',
+            'pricing_tier_id' => $maxTier->id,
+        ]);
+        $this->post('/ussd/events', [
+            'sessionId' => 'AT-MAX-1',
+            'serviceCode' => '*347*204#',
+            'phoneNumber' => '+2348011110004',
+            'status' => 'Success',
+            'cost' => 'NGN 4.00',
+        ])->assertOk();
+        $maxClient->refresh();
+        $this->assertEquals(90.00, $maxClient->token_balance); // 100 - (4 * 2.5 = 10)
+    }
 }

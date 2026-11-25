@@ -45,12 +45,23 @@
             @foreach ($tiers as $tier)
                 @php
                     $prices = $tier->servicePrices->pluck('price', 'service_name');
+                    $tierLower = strtolower(trim($tier->tier_name));
+                    $tierMultiplier = (str_contains($tierLower, 'max') || str_contains($tierLower, 'platinum'))
+                        ? '2.5x'
+                        : (str_contains($tierLower, 'premium')
+                            ? '2.9x'
+                            : ((str_contains($tierLower, 'plus') && ! str_contains($tierLower, 'basic')) ? '3.5x' : '4x'));
                 @endphp
                 <div class="rounded-xl border border-n30 bg-primary/5 p-4">
                     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                         <div>
-                            <h6 class="h6">{{ $tier->tier_name }}</h6>
-                            <span class="text-xs text-n100">{{ $tier->clients_count }} assigned client(s)</span>
+                            <div class="flex items-center gap-2">
+                                <h6 class="h6">{{ $tier->tier_name }}</h6>
+                                <span class="inline-flex items-center rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+                                    USSD AT {{ $tierMultiplier }}
+                                </span>
+                            </div>
+                            <span class="text-xs text-n100">{{ $tier->clients_count }} assigned client(s) · SMS &amp; Airtime stay 1x</span>
                         </div>
                         @if ($tier->clients_count === 0)
                             <form method="POST" action="{{ route('admin.pricing-tiers.destroy', $tier) }}" onsubmit="return confirm('Delete this pricing tier?')">

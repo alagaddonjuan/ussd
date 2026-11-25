@@ -48,6 +48,19 @@ class PortalViewsTest extends TestCase
             'response_text' => "Welcome\n1. Test",
         ]);
 
+        // Public Q4 landing page for visitors
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Q4 International')
+            ->assertSee('Basic Plan')
+            ->assertSee('Plus Plan')
+            ->assertSee('Premium Plan')
+            ->assertSee('Max Plan')
+            ->assertSee('X4')
+            ->assertSee('X3.5')
+            ->assertSee('X2.9')
+            ->assertSee('X2.5');
+
         // Guest routes
         $this->get('/login')->assertOk();
         $this->get('/register')->assertOk();
@@ -64,6 +77,9 @@ class PortalViewsTest extends TestCase
         $this->actingAs($admin)->get('/team')->assertOk();
         $this->actingAs($admin)->get('/settings/profile')->assertOk();
         $this->actingAs($admin)->get('/settings/security')->assertOk();
+
+        // Authenticated users can also view landing page with dashboard shortcut
+        $this->actingAs($admin)->get('/')->assertOk()->assertSee('Go to Dashboard');
 
         // Admin portal routes
         $this->actingAs($admin)->get('/admin/dashboard')->assertOk();

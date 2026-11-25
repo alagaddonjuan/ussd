@@ -30,3 +30,6 @@ Route::prefix('v1/ussd')->group(function () {
     Route::post('/', [UssdCallbackController::class, 'handle']);
     Route::post('/events', [UssdCallbackController::class, 'events']);
 });
+
+Route::post('/ussd', [UssdCallbackController::class, 'handle']);
+Route::post('/ussd/events', [UssdCallbackController::class, 'events']);

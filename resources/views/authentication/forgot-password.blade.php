@@ -10,8 +10,11 @@
 </head>
 
 <body class="vertical bg-secondary/5">
-    <div class="min-h-screen flex items-center justify-center px-4 py-10">
-        <div class="box max-w-[480px] w-full p-6 md:p-8 border border-n30">
+    <div class="min-h-screen flex flex-col items-center justify-center px-4 py-10">
+        <a href="{{ route('home') }}" class="mb-6 inline-flex items-center">
+            <img src="{{ asset('assets/images/q4-logo.png') }}" alt="Q4 International" class="h-12 w-auto object-contain" />
+        </a>
+        <div class="box max-w-[480px] w-full p-6 md:p-8">
             <h3 class="h3 mb-2">Forgot Password?</h3>
             <p class="text-sm text-n200 mb-6 pb-4 bb-dashed">
                 Enter your registered email address and we will send you a password reset link.

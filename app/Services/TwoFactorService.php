@@ -10,7 +10,11 @@ use PragmaRX\Google2FA\Google2FA;
 
 class TwoFactorService
 {
-    public function __construct(protected Google2FA $google2fa) {}
+    public function __construct(protected Google2FA $google2fa)
+    {
+        // Support legacy 52-character Base32 secrets migrated from Node speakeasy.
+        $this->google2fa->setEnforceGoogleAuthenticatorCompatibility(false);
+    }
 
     public function generateSecret(): string
     {
@@ -33,10 +37,18 @@ class TwoFactorService
     public function verifyCode(string $secret, string $code): bool
     {
         $sanitized = preg_replace('/\s+/', '', $code) ?? '';
-        if ($sanitized === '' || $secret === '') {
+        $normalizedSecret = strtoupper(preg_replace('/\s+/', '', $secret) ?? '');
+
+        if ($sanitized === '' || $normalizedSecret === '') {
             return false;
         }
 
-        return (bool) $this->google2fa->verifyKey($secret, $sanitized);
+        try {
+            $this->google2fa->setEnforceGoogleAuthenticatorCompatibility(false);
+
+            return (bool) $this->google2fa->verifyKey($normalizedSecret, $sanitized);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }

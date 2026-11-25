@@ -127,16 +127,16 @@ const currentUrl = window.location.origin;
 // load dark images
 const loadImg = () => {
   if (document.documentElement.classList.contains('dark')) {
-    logoFull && logoFull.setAttribute('src', `${currentUrl}/assets/images/logo-with-text.png`);
-    logoFull2 && logoFull2.setAttribute('src', `${currentUrl}/assets/images/logo-with-text.png`);
-    logoIcon && logoIcon.setAttribute('src', `${currentUrl}/assets/images/logo.png`);
-    logoText && logoText.setAttribute('src', `${currentUrl}/assets/images/logo-text.png`);
+    logoFull && logoFull.setAttribute('src', `${currentUrl}/assets/images/q4-logo-white.png`);
+    logoFull2 && logoFull2.setAttribute('src', `${currentUrl}/assets/images/q4-logo-white.png`);
+    logoIcon && logoIcon.setAttribute('src', `${currentUrl}/assets/images/q4-logo-white-sm.png`);
+    logoText && logoText.setAttribute('src', `${currentUrl}/assets/images/q4-logo-white-sm.png`);
     qrCodeImg && qrCodeImg.setAttribute('src', `${currentUrl}/assets/images/qrcode.png`);
   } else {
-    logoFull && logoFull.setAttribute('src', `${currentUrl}/assets/images/logo-with-text-dark.png`);
-    logoFull2 && logoFull2.setAttribute('src', `${currentUrl}/assets/images/logo-with-text-dark.png`);
-    logoIcon && logoIcon.setAttribute('src', `${currentUrl}/assets/images/logo-dark.png`);
-    logoText && logoText.setAttribute('src', `${currentUrl}/assets/images/logo-text-dark.png`);
+    logoFull && logoFull.setAttribute('src', `${currentUrl}/assets/images/q4-logo.png`);
+    logoFull2 && logoFull2.setAttribute('src', `${currentUrl}/assets/images/q4-logo.png`);
+    logoIcon && logoIcon.setAttribute('src', `${currentUrl}/assets/images/q4-logo.png`);
+    logoText && logoText.setAttribute('src', `${currentUrl}/assets/images/q4-logo.png`);
     qrCodeImg && qrCodeImg.setAttribute('src', `${currentUrl}/assets/images/qrcode-dark.png`);
   }
 };
@@ -254,11 +254,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (darkBtn) {
       darkBtn.classList.add('active');
       lightBtn && lightBtn.classList.remove('active');
-      logoFull && logoFull.setAttribute('src', `${currentUrl}/assets/images/logo-with-text-dark.png`);
-      logoIcon && logoIcon.setAttribute('src', `${currentUrl}/assets/images/logo-dark.png`);
-      logoText && logoText.setAttribute('src', `${currentUrl}/assets/images/logo-text-dark.png`);
+      logoFull && logoFull.setAttribute('src', `${currentUrl}/assets/images/q4-logo-white.png`);
+      logoIcon && logoIcon.setAttribute('src', `${currentUrl}/assets/images/q4-logo-white-sm.png`);
+      logoText && logoText.setAttribute('src', `${currentUrl}/assets/images/q4-logo-white-sm.png`);
     }
-    logoFull2 && logoFull2.setAttribute('src', `${currentUrl}/assets/images/logo-with-text-dark.png`);
+    logoFull2 && logoFull2.setAttribute('src', `${currentUrl}/assets/images/q4-logo-white.png`);
     qrCodeImg && qrCodeImg.setAttribute('src', `${currentUrl}/assets/images/qrcode-dark.png`);
   } else {
     darkBtn && darkBtn.classList.remove('active');

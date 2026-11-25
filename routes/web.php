@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::post('/ussd', [UssdCallbackController::class, 'handle'])->name('ussd.callback');
+Route::post('/ussd/events', [UssdCallbackController::class, 'events'])->name('ussd.events');
 Route::post('/ussd_callback', [UssdCallbackController::class, 'handle'])->name('ussd.callback.legacy');
 Route::post('/billing/webhook', [WebhookController::class, 'paystack'])->name('paystack.webhook');
 
@@ -28,13 +29,7 @@ Route::post('/billing/webhook', [WebhookController::class, 'paystack'])->name('p
 |--------------------------------------------------------------------------
 */
 Route::get('/', function () {
-    if (auth()->check()) {
-        return auth()->user()->isAdmin()
-            ? redirect()->route('admin.dashboard')
-            : redirect()->route('dashboard');
-    }
-
-    return redirect()->route('login');
+    return view('landing');
 })->name('home');
 
 Route::middleware('guest')->group(function () {

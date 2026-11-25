@@ -10,8 +10,11 @@
 </head>
 
 <body class="vertical bg-secondary/5">
-    <div class="flex items-center justify-center py-10 md:py-16 lg:py-20 px-3">
-        <div class="flex flex-col items-center justify-center text-center max-w-[640px] mx-auto">
+    <div class="min-h-screen flex flex-col items-center justify-center py-10 md:py-16 lg:py-20 px-3">
+        <a href="{{ route('home') }}" class="mb-8 inline-flex items-center">
+            <img src="{{ asset('assets/images/q4-logo.png') }}" alt="Q4 International" class="h-12 w-auto object-contain" />
+        </a>
+        <div class="box flex flex-col items-center justify-center text-center max-w-[640px] w-full mx-auto p-8 md:p-10">
             <img src="{{ asset('assets/images/system-error.png') }}" alt="Error illustration" class="mb-10 lg:mb-14" />
             <h2 class="h2 mb-4 lg:mb-6">Oops... Something went wrong</h2>
             <p class="mb-6 md:mb-8 lg:mb-10">
