@@ -1,82 +1,115 @@
-<!DOCTYPE html>
-<html dir="ltr" lang="en">
+@extends('authentication.layout')
+@section('title', 'Sign Up — ' . config('app.name'))
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="shortcut icon" href="{{ asset('assets/images/favicon.ico') }}" type="image/x-icon" />
-    @vite(['resources/css/app.css'])
-    <title>Sign Up — {{ config('app.name') }}</title>
-</head>
+@section('header-action')
+    <a href="{{ route('login') }}"
+        class="rounded-full bg-[#0878F8] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#0B3A75] transition-colors">
+        Sign In
+    </a>
+@endsection
 
-<body class="vertical bg-secondary/5">
-    <div class="relative min-h-screen bg-secondary/5">
-        <img src="{{ asset('assets/images/ellipse1.png') }}" class="absolute top-16 md:top-5 ltr:right-10 rtl:left-10" alt="ellipse" />
-        <img src="{{ asset('assets/images/ellipse2.png') }}" class="absolute bottom-6 ltr:left-0 rtl:right-0 ltr:sm:left-32 rtl:sm:right-32" alt="ellipse" />
+@section('auth-content')
+<div class="w-full max-w-[1040px] auth-frosted-panel rounded-3xl overflow-hidden grid grid-cols-12">
+    @include('authentication._brand-panel', [
+        'badge' => 'Instant API & USSD Onboarding',
+        'heading' => 'Launch Enterprise USSD & Messaging in Minutes.',
+        'subtext' => 'Register your organization account to receive an instant default API key, Text-to-Menu USSD builder access, Bulk SMS, and Paystack wallet top-ups.',
+    ])
 
-        <a href="{{ route('home') }}" class="inline-flex items-center gap-3 p-6 lg:p-8 relative z-10">
-            <img src="{{ asset('assets/images/q4-logo.png') }}" alt="Q4 International" class="h-11 w-auto object-contain" />
-        </a>
+    <div class="col-span-12 lg:col-span-7 p-6 sm:p-10 lg:p-12 flex flex-col justify-center">
+        <div class="mb-6">
+            <span class="inline-block rounded-full bg-[#10B981]/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#10B981] mb-3">
+                New Organization Setup
+            </span>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-[#0B3A75] dark:text-white">Create Client Account</h1>
+            <p class="mt-1.5 text-sm text-slate-600 dark:text-slate-300">
+                Get instant access to USSD Menu Builder, Bulk SMS, Airtime &amp; API Keys.
+            </p>
+        </div>
 
-        <div class="flex items-center justify-center mt-4">
-            <div class="relative z-10 max-w-[1200px] w-full mx-auto px-3 pb-10">
-                <div class="box p-4 md:p-6 xl:p-8 grid grid-cols-12 gap-6 items-center">
-                    <form method="POST" action="{{ route('register.submit') }}" class="col-span-12 lg:col-span-7">
-                        @csrf
-                        <div class="box bg-primary/5 lg:p-6 xl:p-8 border border-n30">
-                            <h3 class="h3 mb-3">Create Client Account</h3>
-                            <p class="md:mb-6 md:pb-6 mb-4 pb-4 bb-dashed text-sm md:text-base text-n200">
-                                Get instant access to USSD Menu Builder, Bulk SMS, Airtime &amp; API Keys
-                            </p>
+        @include('partials._alerts')
 
-                            @include('partials._alerts')
+        <form method="POST" action="{{ route('register.submit') }}" class="space-y-4">
+            @csrf
 
-                            <div class="mb-4">
-                                <label for="name" class="md:text-lg font-medium block mb-2">Company / Account Name</label>
-                                <input type="text" name="name" id="name" value="{{ old('name') }}" required
-                                    class="w-full text-sm bg-n0 border border-n30 rounded-3xl px-4 md:px-6 py-3"
-                                    placeholder="Acme Communications Ltd" />
-                            </div>
+            <div>
+                <label for="name" class="block text-xs font-bold uppercase tracking-wider text-[#0B3A75] dark:text-slate-200 mb-2">
+                    Company / Account Name
+                </label>
+                <div class="relative">
+                    <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#0878F8]">
+                        <i class="las la-building text-lg"></i>
+                    </span>
+                    <input type="text" name="name" id="name" value="{{ old('name') }}" required autofocus
+                        class="auth-glass-input w-full rounded-2xl pl-11 pr-4 py-3 text-sm"
+                        placeholder="Acme Communications Ltd" />
+                </div>
+            </div>
 
-                            <div class="mb-4">
-                                <label for="email" class="md:text-lg font-medium block mb-2">Email Address</label>
-                                <input type="email" name="email" id="email" value="{{ old('email') }}" required
-                                    class="w-full text-sm bg-n0 border border-n30 rounded-3xl px-4 md:px-6 py-3"
-                                    placeholder="you@company.com" />
-                            </div>
+            <div>
+                <label for="email" class="block text-xs font-bold uppercase tracking-wider text-[#0B3A75] dark:text-slate-200 mb-2">
+                    Work Email Address
+                </label>
+                <div class="relative">
+                    <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#0878F8]">
+                        <i class="las la-envelope text-lg"></i>
+                    </span>
+                    <input type="email" name="email" id="email" value="{{ old('email') }}" required
+                        class="auth-glass-input w-full rounded-2xl pl-11 pr-4 py-3 text-sm"
+                        placeholder="you@company.com" />
+                </div>
+            </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label for="password" class="md:text-lg font-medium block mb-2">Password</label>
-                                    <input type="password" name="password" id="password" required
-                                        class="w-full text-sm bg-n0 border border-n30 rounded-3xl px-4 md:px-6 py-3"
-                                        placeholder="Min. 8 characters" />
-                                </div>
-                                <div>
-                                    <label for="password_confirmation" class="md:text-lg font-medium block mb-2">Confirm Password</label>
-                                    <input type="password" name="password_confirmation" id="password_confirmation" required
-                                        class="w-full text-sm bg-n0 border border-n30 rounded-3xl px-4 md:px-6 py-3"
-                                        placeholder="Repeat Password" />
-                                </div>
-                            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="password" class="block text-xs font-bold uppercase tracking-wider text-[#0B3A75] dark:text-slate-200 mb-2">
+                        Password
+                    </label>
+                    <div class="relative">
+                        <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#0878F8]">
+                            <i class="las la-lock text-lg"></i>
+                        </span>
+                        <input type="password" name="password" id="password" required
+                            class="auth-glass-input w-full rounded-2xl pl-11 pr-10 py-3 text-sm"
+                            placeholder="Min. 8 chars" />
+                        <button type="button" onclick="toggleAuthPassword('password', this)"
+                            aria-label="Toggle password visibility"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#0878F8] cursor-pointer">
+                            <i class="las la-eye text-base"></i>
+                        </button>
+                    </div>
+                </div>
 
-                            <p class="text-sm mt-3">
-                                Already have an account?
-                                <a class="text-primary font-medium" href="{{ route('login') }}">Sign In</a>
-                            </p>
-
-                            <div class="mt-8">
-                                <button type="submit" class="btn-primary px-8">Create Account</button>
-                            </div>
-                        </div>
-                    </form>
-                    <div class="col-span-12 lg:col-span-5 hidden lg:flex justify-center">
-                        <img src="{{ asset('assets/images/auth.png') }}" alt="Signup illustration" class="max-w-full h-auto" />
+                <div>
+                    <label for="password_confirmation" class="block text-xs font-bold uppercase tracking-wider text-[#0B3A75] dark:text-slate-200 mb-2">
+                        Confirm Password
+                    </label>
+                    <div class="relative">
+                        <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#0878F8]">
+                            <i class="las la-check-circle text-lg"></i>
+                        </span>
+                        <input type="password" name="password_confirmation" id="password_confirmation" required
+                            class="auth-glass-input w-full rounded-2xl pl-11 pr-10 py-3 text-sm"
+                            placeholder="Repeat password" />
+                        <button type="button" onclick="toggleAuthPassword('password_confirmation', this)"
+                            aria-label="Toggle password confirmation visibility"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#0878F8] cursor-pointer">
+                            <i class="las la-eye text-base"></i>
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</body>
 
-</html>
+            <button type="submit"
+                class="mt-2 w-full rounded-2xl bg-gradient-to-r from-[#0878F8] to-[#0B3A75] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#0878F8]/30 hover:opacity-95 transition-all cursor-pointer">
+                Create Account &amp; Get API Key <i class="las la-arrow-right ml-1"></i>
+            </button>
+        </form>
+
+        <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-300">
+            Already have an account?
+            <a class="font-bold text-[#0878F8] hover:underline" href="{{ route('login') }}">Sign In</a>
+        </p>
+    </div>
+</div>
+@endsection
