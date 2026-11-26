@@ -29,7 +29,7 @@ class PortalViewsTest extends TestCase
             'is_admin' => true,
             'status' => 'active',
             'token_balance' => 5000,
-            'ussd_code' => '*347*102#',
+            'ussd_code' => '*384*23#',
             'pricing_tier_id' => $tier->id,
         ]);
 
@@ -63,6 +63,15 @@ class PortalViewsTest extends TestCase
             ->assertSee('₦19.56')
             ->assertSee('₦48.00')
             ->assertSee('₦18.00')
+            ->assertSee('Social Betting')
+            ->assertSee('lotto.q4iltd.com')
+            ->assertSee('Zenith')
+            ->assertSee('Rexpay')
+            ->assertSee('facebook.com', false)
+            ->assertSee('instagram.com/q4international', false)
+            ->assertSee('linkedin.com/company/q4i-limited', false)
+            ->assertSee('threads.com/@q4international', false)
+            ->assertSee('tiktok.com/@q4international', false)
             ->assertDontSee("Africa's Talking")
             ->assertDontSee('Africa&apos;s Talking', false)
             ->assertDontSee('*347*102#')
@@ -75,10 +84,16 @@ class PortalViewsTest extends TestCase
         $this->get('/reset-password/testtoken')->assertOk();
 
         // Client portal routes
-        $this->actingAs($admin)->get('/dashboard')->assertOk();
+        $this->actingAs($admin)->get('/dashboard')
+            ->assertOk()
+            ->assertDontSee("Africa's Talking")
+            ->assertDontSee('USSD AT');
         $this->actingAs($admin)->get('/services')->assertOk();
         $this->actingAs($admin)->get('/ussd-menus')->assertOk();
-        $this->actingAs($admin)->get("/ussd-menus/{$menu->id}")->assertOk();
+        $this->actingAs($admin)->get("/ussd-menus/{$menu->id}")
+            ->assertOk()
+            ->assertSee('Quick Text-to-Menu Builder')
+            ->assertDontSee("Africa's Talking");
         $this->actingAs($admin)->get('/billing')->assertOk();
         $this->actingAs($admin)->get('/api-keys')->assertOk();
         $this->actingAs($admin)->get('/team')->assertOk();
@@ -93,6 +108,8 @@ class PortalViewsTest extends TestCase
         $this->actingAs($admin)->get('/admin/clients')->assertOk();
         $this->actingAs($admin)->get('/admin/pricing-tiers')->assertOk();
         $this->actingAs($admin)->get('/admin/logs')->assertOk();
+        $this->actingAs($admin)->get('/admin/logs?tab=webhooks')->assertOk();
+        $this->actingAs($admin)->get('/admin/logs?tab=audit')->assertOk();
         $this->actingAs($admin)->get('/admin/ussd-menus')->assertOk();
         $this->actingAs($admin)->get('/admin/announcements')->assertOk();
     }

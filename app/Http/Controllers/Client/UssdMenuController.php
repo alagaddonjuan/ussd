@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\UssdLog;
 use App\Models\UssdMenu;
 use App\Models\UssdMenuItem;
+use App\Services\TextMenuParserService;
 use App\Services\UssdEngineService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
 class UssdMenuController extends Controller
@@ -66,20 +68,60 @@ class UssdMenuController extends Controller
             ->with('status', 'USSD menu created with a starter ROOT screen.');
     }
 
-    public function show(Request $request, UssdMenu $menu): View
+    public function show(Request $request, UssdMenu $menu, TextMenuParserService $parser): View
     {
         $this->authorizeMenu($request, $menu);
 
         $menu->load('client');
         $items = $menu->items()->orderBy('id')->get();
         $tree = $this->buildTree($items);
+        $menuTextOutline = $parser->toText($items);
 
         return view('client.ussd-builder', [
             'client' => $request->user(),
             'menu' => $menu,
             'items' => $items,
             'tree' => $tree,
+            'menuTextOutline' => $menuTextOutline,
         ]);
+    }
+
+    public function importText(Request $request, UssdMenu $menu, TextMenuParserService $parser): RedirectResponse
+    {
+        $this->authorizeMenu($request, $menu);
+
+        $data = $request->validate([
+            'menu_text' => ['required', 'string', 'max:50000'],
+            'mode' => ['required', 'in:replace,append'],
+            'parent_item_id' => ['nullable', 'integer', 'exists:ussd_menu_items,id'],
+            'default_leaf_type' => ['required', 'in:API,END'],
+        ]);
+
+        $parentId = ! empty($data['parent_item_id']) ? (int) $data['parent_item_id'] : null;
+        if ($data['mode'] === 'append' && $parentId !== null) {
+            $parentBelongsToMenu = UssdMenuItem::query()
+                ->where('id', $parentId)
+                ->where('menu_id', $menu->id)
+                ->exists();
+
+            if (! $parentBelongsToMenu) {
+                return back()->withErrors(['parent_item_id' => 'Selected parent step does not belong to this menu.']);
+            }
+        }
+
+        $count = $parser->importIntoMenu(
+            $menu,
+            $data['menu_text'],
+            $data['mode'],
+            $parentId,
+            $data['default_leaf_type']
+        );
+
+        if ($count === 0) {
+            return back()->withErrors(['menu_text' => 'Could not parse any menu steps from the provided outline.']);
+        }
+
+        return back()->with('status', "Built {$count} menu step(s) from text outline.");
     }
 
     public function setActive(Request $request, UssdMenu $menu): RedirectResponse
@@ -212,6 +254,48 @@ class UssdMenuController extends Controller
         );
 
         return response()->json(['reply' => $reply]);
+    }
+
+    public function testApiNode(Request $request, UssdMenu $menu): JsonResponse
+    {
+        $this->authorizeMenu($request, $menu);
+        $menu->load('client');
+
+        $data = $request->validate([
+            'url' => ['required', 'url', 'max:500'],
+            'text' => ['nullable', 'string', 'max:255'],
+            'phoneNumber' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $scheme = strtolower((string) parse_url($data['url'], PHP_URL_SCHEME));
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return response()->json(['ok' => false, 'message' => 'Only http:// and https:// endpoints are allowed.'], 422);
+        }
+
+        $start = microtime(true);
+        try {
+            $response = Http::asForm()->timeout(8)->post($data['url'], [
+                'sessionId' => 'API-TEST-'.time(),
+                'serviceCode' => $menu->client?->ussd_code ?? '*384*23#',
+                'phoneNumber' => $data['phoneNumber'] ?: '+2348000000000',
+                'text' => (string) ($data['text'] ?? ''),
+            ]);
+            $latencyMs = (int) round((microtime(true) - $start) * 1000);
+
+            return response()->json([
+                'ok' => $response->successful(),
+                'status_code' => $response->status(),
+                'latency_ms' => $latencyMs,
+                'reply' => trim((string) $response->body()),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'status_code' => 0,
+                'latency_ms' => (int) round((microtime(true) - $start) * 1000),
+                'reply' => 'Connection error: '.$e->getMessage(),
+            ], 502);
+        }
     }
 
     protected function authorizeMenu(Request $request, UssdMenu $menu): void

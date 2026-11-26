@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\SmsLog;
 use App\Models\UssdLog;
 use App\Services\AfricasTalkingService;
+use App\Services\LowBalanceNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -43,7 +44,7 @@ class ServiceController extends Controller
         ));
     }
 
-    public function sendSms(Request $request, AfricasTalkingService $at): RedirectResponse
+    public function sendSms(Request $request, AfricasTalkingService $at, LowBalanceNotifier $notifier): RedirectResponse
     {
         $data = $request->validate([
             'to' => ['required', 'string', 'max:32'],
@@ -102,10 +103,13 @@ class ServiceController extends Controller
             'created_at' => now(),
         ]);
 
+        $client->refresh();
+        $notifier->checkAndNotify($client);
+
         return back()->with('status', "SMS dispatched ({$result['status']}). Cost: ₦{$cost}.");
     }
 
-    public function sendAirtime(Request $request, AfricasTalkingService $at): RedirectResponse
+    public function sendAirtime(Request $request, AfricasTalkingService $at, LowBalanceNotifier $notifier): RedirectResponse
     {
         $data = $request->validate([
             'phone_number' => ['required', 'string', 'max:32'],
@@ -152,6 +156,9 @@ class ServiceController extends Controller
             'created_at' => now(),
         ]);
 
+        $client->refresh();
+        $notifier->checkAndNotify($client);
+
         return back()->with('status', "Airtime processed ({$result['status']}) for {$data['phone_number']}.");
     }
 
@@ -183,9 +190,9 @@ class ServiceController extends Controller
             ->where('client_id', $request->user()->id)
             ->orderByDesc('id')
             ->limit(5000)
-            ->get(['id', 'session_id', 'phone_number', 'service_code', 'session_data', 'cost', 'status', 'created_at']);
+            ->get(['id', 'session_id', 'phone_number', 'service_code', 'network_name', 'hops', 'duration_ms', 'session_data', 'cost', 'status', 'created_at']);
 
-        return $this->streamCsv('ussd_logs', ['ID', 'Session ID', 'Phone', 'Service Code', 'Input Path', 'Cost', 'Status', 'Created At'], $rows);
+        return $this->streamCsv('ussd_logs', ['ID', 'Session ID', 'Phone', 'Service Code', 'Carrier', 'Hops', 'Duration (ms)', 'Input Path', 'Cost', 'Status', 'Created At'], $rows);
     }
 
     protected function streamCsv(string $prefix, array $headers, $rows): StreamedResponse

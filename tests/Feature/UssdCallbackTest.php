@@ -215,6 +215,9 @@ class UssdCallbackTest extends TestCase
             'sessionId' => 'AT-BASIC-1',
             'serviceCode' => '*347*201#',
             'phoneNumber' => '+2348011110001',
+            'networkCode' => '62130',
+            'durationInMillis' => 22000,
+            'hopsCount' => 4,
             'status' => 'Success',
             'cost' => 'NGN 3.00',
         ])->assertOk();
@@ -226,6 +229,14 @@ class UssdCallbackTest extends TestCase
             'session_id' => 'AT-BASIC-1',
             'cost' => 12.00,
             'client_price' => 12.00,
+            'upstream_cost' => 3.0,
+            'duration_ms' => 22000,
+            'hops' => 4,
+            'network_name' => 'MTN Nigeria',
+        ]);
+        $this->assertDatabaseHas('webhook_logs', [
+            'provider' => 'ussd_gateway',
+            'status_code' => 200,
         ]);
 
         // Duplicate webhook stays idempotent
@@ -297,5 +308,62 @@ class UssdCallbackTest extends TestCase
         ])->assertOk();
         $maxClient->refresh();
         $this->assertEquals(90.00, $maxClient->token_balance); // 100 - (4 * 2.5 = 10)
+    }
+
+    public function test_text_to_menu_builder_imports_nested_tree_and_drives_callbacks(): void
+    {
+        $client = Client::create([
+            'name' => 'Q4 Text Builder',
+            'email' => 'builder@q4iltd.com',
+            'password' => Hash::make('secret123'),
+            'ussd_code' => '*384*500#',
+            'token_balance' => 100.00,
+            'status' => 'active',
+        ]);
+
+        $menu = UssdMenu::create([
+            'client_id' => $client->id,
+            'menu_name' => 'Q4 Flow',
+            'is_active' => true,
+            'is_archived' => false,
+        ]);
+
+        $outline = implode("\n", [
+            'Welcome to Q4 Services',
+            '  1. Play Games',
+            '    1. Keno',
+            '      1. Select Balls [END: Balls submitted]',
+            '  2. Support [END: Email support@q4iltd.com]',
+        ]);
+
+        $this->actingAs($client)->post("/ussd-menus/{$menu->id}/import-text", [
+            'menu_text' => $outline,
+            'mode' => 'replace',
+            'default_leaf_type' => 'END',
+        ])->assertSessionHas('status');
+
+        $this->assertDatabaseHas('ussd_menu_items', [
+            'menu_id' => $menu->id,
+            'option_trigger' => 'ROOT',
+            'response_type' => 'CON',
+        ]);
+
+        // Dial ROOT -> should list 1. Play Games & 2. Support
+        $rRoot = $this->post('/ussd', [
+            'sessionId' => 'SIM-TEXT-1',
+            'serviceCode' => '*384*500#',
+            'phoneNumber' => '+2348010000001',
+            'text' => '',
+        ])->assertOk();
+        $this->assertSame("CON Welcome to Q4 Services\n1. Play Games\n2. Support", $rRoot->getContent());
+
+        // Navigate 1*1*1 -> hits deeply nested leaf END item
+        $rDeep = $this->post('/ussd', [
+            'sessionId' => 'SIM-TEXT-1',
+            'serviceCode' => '*384*500#',
+            'phoneNumber' => '+2348010000001',
+            'text' => '1*1*1',
+        ])->assertOk();
+        $this->assertSame('END Balls submitted', $rDeep->getContent());
     }
 }

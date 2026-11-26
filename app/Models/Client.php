@@ -30,6 +30,13 @@ class Client extends Authenticatable
         'is_admin',
         'status',
         'pricing_tier_id',
+        'low_balance_threshold',
+        'low_balance_notified_at',
+        'monthly_maintenance_fee',
+        'maintenance_enabled',
+        'last_maintenance_billed_at',
+        'kyc_status',
+        'kyc_notes',
         'password_reset_token',
         'password_reset_expires',
     ];
@@ -45,8 +52,13 @@ class Client extends Authenticatable
         return [
             'is_2fa_enabled' => 'boolean',
             'is_admin' => 'boolean',
+            'maintenance_enabled' => 'boolean',
             'token_balance' => 'float',
+            'low_balance_threshold' => 'float',
+            'monthly_maintenance_fee' => 'float',
             'created_at' => 'datetime',
+            'low_balance_notified_at' => 'datetime',
+            'last_maintenance_billed_at' => 'datetime',
             'password_reset_expires' => 'datetime',
         ];
     }

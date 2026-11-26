@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\AnnouncementMail;
+use App\Models\AdminAuditLog;
 use App\Models\AirtimeLog;
 use App\Models\Client;
 use App\Models\PricingTier;
@@ -13,6 +14,8 @@ use App\Models\Transaction;
 use App\Models\UssdLog;
 use App\Models\UssdMenu;
 use App\Models\UssdPricing;
+use App\Models\WebhookLog;
+use App\Services\MaintenanceBillingService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,6 +35,25 @@ class AdminController extends Controller
             ->whereIn(DB::raw('LOWER(status)'), ['success'])
             ->where('type', 'credit')
             ->sum('amount');
+
+        $ussdClientRevenue = (float) UssdLog::query()->sum('client_price');
+        $ussdUpstreamCost = (float) UssdLog::query()->sum('upstream_cost');
+        $ussdNetMargin = round($ussdClientRevenue - $ussdUpstreamCost, 2);
+        $activeMaintenanceMrr = (float) Client::query()
+            ->where(fn ($q) => $q->where('is_admin', false)->orWhereNull('is_admin'))
+            ->where('status', 'active')
+            ->where('maintenance_enabled', true)
+            ->sum('monthly_maintenance_fee');
+        $pendingKycCount = Client::query()
+            ->where(fn ($q) => $q->where('is_admin', false)->orWhereNull('is_admin'))
+            ->where('kyc_status', '!=', 'approved')
+            ->count();
+        $recentWebhookErrors = WebhookLog::query()
+            ->where('outcome', '!=', 'ok')
+            ->where('outcome', '!=', 'Success')
+            ->where('outcome', '!=', 'charge.success')
+            ->where('created_at', '>=', now()->subDay())
+            ->count();
 
         $labels = [];
         $ussdSeries = [];
@@ -69,6 +91,12 @@ class AdminController extends Controller
             'totalSms',
             'totalUssd',
             'totalRevenue',
+            'ussdClientRevenue',
+            'ussdUpstreamCost',
+            'ussdNetMargin',
+            'activeMaintenanceMrr',
+            'pendingKycCount',
+            'recentWebhookErrors',
             'labels',
             'ussdSeries',
             'smsSeries',
@@ -105,17 +133,55 @@ class AdminController extends Controller
             'sender_id' => ['nullable', 'string', 'max:255'],
             'pricing_tier_id' => ['nullable', 'integer', 'exists:pricing_tiers,id'],
             'is_admin' => ['nullable', 'boolean'],
+            'monthly_maintenance_fee' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
+            'maintenance_enabled' => ['nullable', 'boolean'],
+            'kyc_status' => ['nullable', 'in:unverified,pending,approved,rejected'],
+            'kyc_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $client->update([
+        $updates = [
             'status' => $data['status'],
-            'ussd_code' => $data['ussd_code'] ?: null,
-            'sender_id' => $data['sender_id'] ?: null,
-            'pricing_tier_id' => $data['pricing_tier_id'] ?: null,
+            'ussd_code' => array_key_exists('ussd_code', $data) ? ($data['ussd_code'] ?: null) : $client->ussd_code,
+            'sender_id' => array_key_exists('sender_id', $data) ? ($data['sender_id'] ?: null) : $client->sender_id,
+            'pricing_tier_id' => array_key_exists('pricing_tier_id', $data) ? ($data['pricing_tier_id'] ?: null) : $client->pricing_tier_id,
             'is_admin' => (bool) ($data['is_admin'] ?? $client->is_admin),
-        ]);
+        ];
+
+        if (array_key_exists('monthly_maintenance_fee', $data) && $data['monthly_maintenance_fee'] !== null) {
+            $updates['monthly_maintenance_fee'] = round((float) $data['monthly_maintenance_fee'], 2);
+        }
+        if ($request->has('maintenance_enabled_present')) {
+            $updates['maintenance_enabled'] = (bool) ($data['maintenance_enabled'] ?? false);
+        } elseif (array_key_exists('maintenance_enabled', $data)) {
+            $updates['maintenance_enabled'] = (bool) $data['maintenance_enabled'];
+        }
+        if (! empty($data['kyc_status'])) {
+            $updates['kyc_status'] = $data['kyc_status'];
+        }
+        if (array_key_exists('kyc_notes', $data)) {
+            $updates['kyc_notes'] = $data['kyc_notes'];
+        }
+
+        $client->update($updates);
+        $this->recordAudit($request, 'client.updated', "Updated {$client->name} (status={$updates['status']}, code=".($updates['ussd_code'] ?? 'none').')', $client->id);
 
         return back()->with('status', "Updated configuration for {$client->name}.");
+    }
+
+    public function chargeMaintenance(Request $request, MaintenanceBillingService $billing): RedirectResponse
+    {
+        $summary = $billing->billDueClients(
+            $request->boolean('force'),
+            $request->boolean('suspend')
+        );
+
+        $this->recordAudit(
+            $request,
+            'maintenance.billed',
+            "Maintenance run: billed={$summary['billed']}, insufficient={$summary['insufficient']}, skipped={$summary['skipped']}, collected=₦{$summary['total_collected']}"
+        );
+
+        return back()->with('status', "Maintenance billing run complete: {$summary['billed']} billed (₦".number_format($summary['total_collected'], 2)."), {$summary['insufficient']} insufficient, {$summary['skipped']} skipped.");
     }
 
     public function manualTransaction(Request $request, Client $client): RedirectResponse
@@ -163,6 +229,8 @@ class AdminController extends Controller
         if (! $ok) {
             return back()->withErrors(['amount' => 'Insufficient balance for manual debit.']);
         }
+
+        $this->recordAudit($request, 'client.wallet_'.$type, "Manual {$type} of ₦{$amount} for {$client->name}", $client->id);
 
         return back()->with('status', "Manual {$type} of ₦{$amount} applied to {$client->name}.");
     }
@@ -259,8 +327,10 @@ class AdminController extends Controller
         $smsLogs = SmsLog::query()->with('client')->orderByDesc('id')->limit(50)->get();
         $airtimeLogs = AirtimeLog::query()->with('client')->orderByDesc('id')->limit(50)->get();
         $transactions = Transaction::query()->with('client')->orderByDesc('id')->limit(50)->get();
+        $webhookLogs = WebhookLog::query()->orderByDesc('id')->limit(50)->get();
+        $auditLogs = AdminAuditLog::query()->with(['actor', 'targetClient'])->orderByDesc('id')->limit(50)->get();
 
-        return view('admin.logs', compact('tab', 'ussdLogs', 'smsLogs', 'airtimeLogs', 'transactions'));
+        return view('admin.logs', compact('tab', 'ussdLogs', 'smsLogs', 'airtimeLogs', 'transactions', 'webhookLogs', 'auditLogs'));
     }
 
     public function exportCsv(Request $request, string $type): StreamedResponse
@@ -329,6 +399,23 @@ class AdminController extends Controller
             Mail::to($email)->send(new AnnouncementMail($data['subject'], $data['message']));
         }
 
+        $this->recordAudit($request, 'announcement.sent', "Announcement '{$data['subject']}' sent to {$emails->count()} client(s)");
+
         return back()->with('status', "Announcement dispatched to {$emails->count()} active client(s).");
+    }
+
+    protected function recordAudit(Request $request, string $action, string $details, ?int $targetClientId = null): void
+    {
+        try {
+            AdminAuditLog::create([
+                'actor_id' => $request->user()?->id,
+                'target_client_id' => $targetClientId,
+                'action' => $action,
+                'details' => $details,
+                'ip_address' => $request->ip(),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable) {
+        }
     }
 }

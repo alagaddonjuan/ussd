@@ -23,6 +23,7 @@ class SettingsController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sender_id' => ['nullable', 'string', 'max:20'],
+            'low_balance_threshold' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
@@ -30,6 +31,11 @@ class SettingsController extends Controller
             'name' => $data['name'],
             'sender_id' => $data['sender_id'] ?? null,
         ];
+
+        if (array_key_exists('low_balance_threshold', $data) && $data['low_balance_threshold'] !== null) {
+            $updates['low_balance_threshold'] = round((float) $data['low_balance_threshold'], 2);
+            $updates['low_balance_notified_at'] = null;
+        }
 
         if (! empty($data['password'])) {
             $updates['password'] = Hash::make($data['password']);

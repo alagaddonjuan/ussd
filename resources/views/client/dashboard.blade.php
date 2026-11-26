@@ -22,46 +22,50 @@
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-12 gap-4 xxl:gap-6 mb-6">
-        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30">
+        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30 border-t-2 border-t-[#0878F8]">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-3">
                 <span class="font-medium text-n200">Token Balance</span>
-                <span class="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary"><i class="las la-wallet"></i></span>
+                <span class="flex size-9 items-center justify-center rounded-full bg-[#0878F8]/12 text-[#0878F8]"><i class="las la-wallet"></i></span>
             </div>
             <h4 class="h4 mb-2">₦{{ number_format((float) $client->token_balance, 2) }}</h4>
-            <span class="text-xs text-primary">Active Status: {{ ucfirst($client->status) }}</span>
+            <span class="text-xs font-semibold {{ $client->status === 'active' ? 'text-[#10B981]' : 'text-error' }}">
+                Status: {{ ucfirst($client->status) }} &bull; Alert @ ₦{{ number_format((float) ($client->low_balance_threshold ?? 5000), 0) }}
+            </span>
         </div>
 
-        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30">
+        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30 border-t-2 border-t-[#0B3A75]">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-3">
                 <span class="font-medium text-n200">Total USSD Hits</span>
-                <span class="flex size-9 items-center justify-center rounded-full bg-secondary/10 text-secondary"><i class="las la-phone-volume"></i></span>
+                <span class="flex size-9 items-center justify-center rounded-full bg-[#0B3A75]/12 text-[#0B3A75] dark:text-[#22C7F8]"><i class="las la-phone-volume"></i></span>
             </div>
             <h4 class="h4 mb-2">{{ number_format($totalUssd) }}</h4>
             <span class="text-xs text-n100">
-                {{ $client->pricingTier?->tier_name ?? 'Basic Plan' }} ·
-                MTN ₦{{ number_format($telcoRates['mtn']['rate'], 2) }}/20s ·
-                Airtel ₦{{ number_format($telcoRates['airtel']['rate'], 2) }}/20s ·
-                Glo ₦{{ number_format($telcoRates['glo']['rate'], 2) }}/120s ·
+                {{ $client->pricingTier?->tier_name ?? 'Basic Plan' }} &bull;
+                MTN ₦{{ number_format($telcoRates['mtn']['rate'], 2) }}/20s &bull;
+                Airtel ₦{{ number_format($telcoRates['airtel']['rate'], 2) }}/20s &bull;
+                Glo ₦{{ number_format($telcoRates['glo']['rate'], 2) }}/120s &bull;
                 T2 ₦{{ number_format($telcoRates['t2']['rate'], 2) }}/20s
             </span>
         </div>
 
-        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30">
+        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30 border-t-2 border-t-[#22C7F8]">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-3">
                 <span class="font-medium text-n200">Total SMS Sent</span>
-                <span class="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary"><i class="las la-sms"></i></span>
+                <span class="flex size-9 items-center justify-center rounded-full bg-[#22C7F8]/15 text-[#0878F8]"><i class="las la-sms"></i></span>
             </div>
             <h4 class="h4 mb-2">{{ number_format($totalSms) }}</h4>
             <span class="text-xs text-n100">SMS Rate: ₦{{ number_format($smsRate, 2) }} / page</span>
         </div>
 
-        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30">
+        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30 border-t-2 border-t-[#6D5EF7]">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-3">
                 <span class="font-medium text-n200">Airtime Vends</span>
-                <span class="flex size-9 items-center justify-center rounded-full bg-warning/10 text-warning"><i class="las la-mobile-alt"></i></span>
+                <span class="flex size-9 items-center justify-center rounded-full bg-[#6D5EF7]/15 text-[#6D5EF7]"><i class="las la-mobile-alt"></i></span>
             </div>
             <h4 class="h4 mb-2">{{ number_format($totalAirtime) }}</h4>
-            <span class="text-xs text-n100">2FA: {{ $client->is_2fa_enabled ? 'Enabled' : 'Disabled' }}</span>
+            <span class="text-xs text-n100">
+                Maint: ₦{{ number_format((float) ($client->monthly_maintenance_fee ?? 159500), 0) }}/mo &bull; 2FA: {{ $client->is_2fa_enabled ? 'On' : 'Off' }}
+            </span>
         </div>
     </div>
 
@@ -71,8 +75,8 @@
             <div class="bb-dashed mb-4 flex flex-wrap items-center justify-between gap-3 pb-4">
                 <h4 class="h4">7-Day USSD &amp; SMS Traffic</h4>
                 <div class="flex items-center gap-4 text-sm">
-                    <span class="flex items-center gap-2"><span class="inline-block size-3 rounded-full bg-primary"></span> USSD</span>
-                    <span class="flex items-center gap-2"><span class="inline-block size-3 rounded-full bg-secondary"></span> SMS</span>
+                    <span class="flex items-center gap-2"><span class="inline-block size-3 rounded-full bg-[#0878F8]"></span> USSD</span>
+                    <span class="flex items-center gap-2"><span class="inline-block size-3 rounded-full bg-[#22C7F8]"></span> SMS</span>
                 </div>
             </div>
             @php
@@ -88,8 +92,8 @@
                     @endphp
                     <div class="flex flex-col items-center h-full justify-end gap-2">
                         <div class="flex items-end gap-1.5 w-full justify-center h-40">
-                            <div class="w-4 rounded-t bg-primary transition-all" style="height: {{ $uVal > 0 ? $uPct : 3 }}%" title="USSD: {{ $uVal }}"></div>
-                            <div class="w-4 rounded-t bg-secondary transition-all" style="height: {{ $sVal > 0 ? $sPct : 3 }}%" title="SMS: {{ $sVal }}"></div>
+                            <div class="w-4 rounded-t bg-[#0878F8] transition-all" style="height: {{ $uVal > 0 ? $uPct : 3 }}%" title="USSD: {{ $uVal }}"></div>
+                            <div class="w-4 rounded-t bg-[#22C7F8] transition-all" style="height: {{ $sVal > 0 ? $sPct : 3 }}%" title="SMS: {{ $sVal }}"></div>
                         </div>
                         <div class="text-center">
                             <p class="text-xs font-medium">{{ $label }}</p>
@@ -115,11 +119,11 @@
                     <span class="text-sm font-medium">Send Airtime</span>
                 </a>
                 <a href="{{ route('ussd.menus.index') }}" class="flex flex-col items-center gap-2 rounded-xl border border-n30 bg-primary/5 p-4 duration-300 hover:border-primary">
-                    <div class="flex size-11 items-center justify-center rounded-full bg-[#FFC861] text-white"><i class="las la-sitemap"></i></div>
+                    <div class="flex size-11 items-center justify-center rounded-full bg-[#10B981] text-white"><i class="las la-sitemap"></i></div>
                     <span class="text-sm font-medium">USSD Builder</span>
                 </a>
                 <a href="{{ route('keys.index') }}" class="flex flex-col items-center gap-2 rounded-xl border border-n30 bg-primary/5 p-4 duration-300 hover:border-primary">
-                    <div class="flex size-11 items-center justify-center rounded-full bg-[#8B5CF6] text-white"><i class="las la-key"></i></div>
+                    <div class="flex size-11 items-center justify-center rounded-full bg-[#6D5EF7] text-white"><i class="las la-key"></i></div>
                     <span class="text-sm font-medium">API Keys</span>
                 </a>
             </div>

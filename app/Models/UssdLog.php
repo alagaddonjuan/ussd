@@ -18,6 +18,10 @@ class UssdLog extends Model
         'service_code',
         'session_data',
         'cost',
+        'upstream_cost',
+        'duration_ms',
+        'hops',
+        'network_name',
         'status',
         'logged_at',
         'client_price',
@@ -28,7 +32,10 @@ class UssdLog extends Model
     {
         return [
             'cost' => 'float',
+            'upstream_cost' => 'float',
             'client_price' => 'float',
+            'duration_ms' => 'integer',
+            'hops' => 'integer',
             'created_at' => 'datetime',
             'logged_at' => 'datetime',
         ];

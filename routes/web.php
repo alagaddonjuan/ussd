@@ -76,6 +76,8 @@ Route::middleware(['auth', 'active.client'])->group(function () {
     Route::post('/ussd-menus/{menu}/activate', [UssdMenuController::class, 'setActive'])->name('ussd.menus.activate');
     Route::delete('/ussd-menus/{menu}', [UssdMenuController::class, 'archive'])->name('ussd.menus.archive');
     Route::post('/ussd-menus/{menu}/items', [UssdMenuController::class, 'storeItem'])->name('ussd.items.store');
+    Route::post('/ussd-menus/{menu}/import-text', [UssdMenuController::class, 'importText'])->name('ussd.menus.import-text');
+    Route::post('/ussd-menus/{menu}/test-api', [UssdMenuController::class, 'testApiNode'])->name('ussd.menus.test-api');
     Route::put('/ussd-items/{item}', [UssdMenuController::class, 'updateItem'])->name('ussd.items.update');
     Route::delete('/ussd-items/{item}', [UssdMenuController::class, 'destroyItem'])->name('ussd.items.destroy');
     Route::post('/ussd-menus/{menu}/simulate', [UssdMenuController::class, 'simulate'])->name('ussd.menus.simulate');
@@ -114,6 +116,7 @@ Route::middleware(['auth', 'active.client'])->group(function () {
         Route::get('/clients', [AdminController::class, 'clients'])->name('clients');
         Route::put('/clients/{client}', [AdminController::class, 'updateClient'])->name('clients.update');
         Route::post('/clients/{client}/transaction', [AdminController::class, 'manualTransaction'])->name('clients.transaction');
+        Route::post('/clients/bill-maintenance', [AdminController::class, 'chargeMaintenance'])->name('clients.bill-maintenance');
 
         Route::get('/pricing-tiers', [AdminController::class, 'pricingTiers'])->name('pricing-tiers');
         Route::post('/pricing-tiers', [AdminController::class, 'storeTier'])->name('pricing-tiers.store');

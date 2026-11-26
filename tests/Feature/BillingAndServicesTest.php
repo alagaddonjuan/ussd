@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\LowBalanceAlertMail;
 use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\PricingTier;
@@ -10,6 +11,7 @@ use App\Models\Transaction;
 use App\Models\UssdMenu;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class BillingAndServicesTest extends TestCase
@@ -126,5 +128,38 @@ class BillingAndServicesTest extends TestCase
         // Alice cannot mutate Bob's menu or API key (IDOR blocked)
         $this->actingAs($alice)->get("/ussd-menus/{$bobMenu->id}")->assertStatus(403);
         $this->actingAs($alice)->delete("/api-keys/{$bobKey->id}")->assertStatus(403);
+    }
+
+    public function test_low_balance_email_alert_triggers_once_within_24h(): void
+    {
+        Mail::fake();
+        $tier = PricingTier::create(['tier_name' => 'Standard']);
+        ServicePrice::create(['pricing_tier_id' => $tier->id, 'service_name' => 'SMS', 'price' => 10.00]);
+
+        $client = Client::create([
+            'name' => 'Low Wallet Client',
+            'email' => 'alerts@q4iltd.com',
+            'password' => Hash::make('Password123!'),
+            'token_balance' => 105.00,
+            'low_balance_threshold' => 100.00,
+            'status' => 'active',
+            'pricing_tier_id' => $tier->id,
+        ]);
+
+        // Drops balance from 105 to 95 (<= 100 threshold) -> triggers alert email once
+        $this->actingAs($client)->post('/services/sms', [
+            'to' => '+2348099990001',
+            'message' => 'Alert threshold trigger test',
+        ])->assertSessionHas('status');
+
+        Mail::assertSentTimes(LowBalanceAlertMail::class, 1);
+
+        // Second SMS within 24h should NOT resend duplicate alert email
+        $this->actingAs($client)->post('/services/sms', [
+            'to' => '+2348099990001',
+            'message' => 'Second SMS within 24h',
+        ])->assertSessionHas('status');
+
+        Mail::assertSentTimes(LowBalanceAlertMail::class, 1);
     }
 }

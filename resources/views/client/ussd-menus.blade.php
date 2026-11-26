@@ -89,26 +89,42 @@
             <table class="w-full whitespace-nowrap text-sm">
                 <thead>
                     <tr class="bg-secondary/5">
-                        <th class="px-4 py-3 text-start">Session ID</th>
-                        <th class="px-4 py-3 text-start">Phone</th>
+                        <th class="px-4 py-3 text-start">Date</th>
                         <th class="px-4 py-3 text-start">Code</th>
+                        <th class="px-4 py-3 text-start">Phone</th>
+                        <th class="px-4 py-3 text-start">Carrier</th>
+                        <th class="px-4 py-3 text-start">Hops</th>
+                        <th class="px-4 py-3 text-start">Duration</th>
                         <th class="px-4 py-3 text-start">Input Path</th>
                         <th class="px-4 py-3 text-start">Cost</th>
-                        <th class="px-4 py-3 text-start">Time</th>
+                        <th class="px-4 py-3 text-start">Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($ussdLogs as $log)
+                        @php
+                            $st = strtolower((string) ($log->status ?: 'success'));
+                            $stClass = $st === 'success'
+                                ? 'bg-[#10B981]/15 text-[#10B981]'
+                                : ($st === 'incomplete' ? 'bg-[#F59E0B]/15 text-[#F59E0B]' : 'bg-error/15 text-error');
+                        @endphp
                         <tr class="even:bg-secondary/5">
-                            <td class="px-4 py-2.5 text-xs">{{ \Illuminate\Support\Str::limit($log->session_id, 20) }}</td>
-                            <td class="px-4 py-2.5 font-medium">{{ $log->phone_number }}</td>
+                            <td class="px-4 py-2.5 text-xs text-n100">{{ optional($log->created_at)->format('M d, Y h:i A') }}</td>
                             <td class="px-4 py-2.5">{{ $log->service_code }}</td>
-                            <td class="px-4 py-2.5">{{ $log->session_data }}</td>
-                            <td class="px-4 py-2.5">₦{{ number_format((float) $log->cost, 2) }}</td>
-                            <td class="px-4 py-2.5 text-xs text-n100">{{ optional($log->created_at)->format('Y-m-d H:i') }}</td>
+                            <td class="px-4 py-2.5 font-medium">{{ $log->phone_number }}</td>
+                            <td class="px-4 py-2.5 text-xs">{{ $log->network_name ?: '—' }}</td>
+                            <td class="px-4 py-2.5 text-xs">{{ $log->hops ?? 1 }}</td>
+                            <td class="px-4 py-2.5 text-xs">{{ $log->duration_ms ? round($log->duration_ms / 1000) . 's' : '—' }}</td>
+                            <td class="px-4 py-2.5">{{ \Illuminate\Support\Str::limit($log->session_data, 28) }}</td>
+                            <td class="px-4 py-2.5 font-semibold">₦{{ number_format((float) $log->cost, 2) }}</td>
+                            <td class="px-4 py-2.5">
+                                <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $stClass }}">
+                                    {{ ucfirst($log->status ?: 'Success') }}
+                                </span>
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-4 py-6 text-center text-n100">No USSD logs recorded yet.</td></tr>
+                        <tr><td colspan="9" class="px-4 py-6 text-center text-n100">No USSD logs recorded yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

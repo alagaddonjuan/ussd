@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use App\Models\Transaction;
+use App\Models\WebhookLog;
 use App\Services\PaystackService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -18,6 +19,15 @@ class WebhookController extends Controller
         $signature = $request->header('x-paystack-signature');
 
         if (! $paystack->verifyWebhookSignature($rawBody, $signature)) {
+            WebhookLog::create([
+                'provider' => 'paystack',
+                'endpoint' => '/billing/webhook',
+                'status_code' => 401,
+                'outcome' => 'invalid_signature',
+                'payload' => mb_substr($rawBody, 0, 500),
+                'created_at' => now(),
+            ]);
+
             return response('Invalid Signature', 401);
         }
 
@@ -66,6 +76,15 @@ class WebhookController extends Controller
                 ]);
             }
         }
+
+        WebhookLog::create([
+            'provider' => 'paystack',
+            'endpoint' => '/billing/webhook',
+            'status_code' => 200,
+            'outcome' => ($event['event'] ?? 'ok'),
+            'payload' => mb_substr($rawBody, 0, 500),
+            'created_at' => now(),
+        ]);
 
         return response('OK', 200);
     }

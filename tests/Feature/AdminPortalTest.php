@@ -73,4 +73,64 @@ class AdminPortalTest extends TestCase
 
         Mail::assertSent(AnnouncementMail::class);
     }
+
+    public function test_admin_maintenance_billing_kyc_and_audit_trail(): void
+    {
+        $admin = Client::create([
+            'name' => 'Super Admin',
+            'email' => 'admin2@example.com',
+            'password' => Hash::make('Password123!'),
+            'is_admin' => true,
+            'status' => 'active',
+        ]);
+
+        $client = Client::create([
+            'name' => 'Funded Merchant',
+            'email' => 'merchant@example.com',
+            'password' => Hash::make('Password123!'),
+            'token_balance' => 200000.00,
+            'monthly_maintenance_fee' => 159500.00,
+            'maintenance_enabled' => true,
+            'kyc_status' => 'pending',
+            'status' => 'active',
+        ]);
+
+        // Update KYC to approved + record audit trail
+        $this->actingAs($admin)->put("/admin/clients/{$client->id}", [
+            'status' => 'active',
+            'kyc_status' => 'approved',
+            'kyc_notes' => 'CAC verified',
+            'maintenance_enabled_present' => '1',
+            'maintenance_enabled' => '1',
+            'monthly_maintenance_fee' => 159500.00,
+        ])->assertSessionHas('status');
+
+        $client->refresh();
+        $this->assertSame('approved', $client->kyc_status);
+        $this->assertDatabaseHas('admin_audit_logs', [
+            'actor_id' => $admin->id,
+            'target_client_id' => $client->id,
+            'action' => 'client.updated',
+        ]);
+
+        // Bill monthly maintenance
+        $this->actingAs($admin)->post('/admin/clients/bill-maintenance')
+            ->assertSessionHas('status');
+
+        $client->refresh();
+        $this->assertEquals(40500.00, $client->token_balance);
+        $this->assertNotNull($client->last_maintenance_billed_at);
+        $this->assertDatabaseHas('transactions', [
+            'client_id' => $client->id,
+            'type' => 'debit',
+            'gateway' => 'maintenance_fee',
+            'amount' => 159500.00,
+        ]);
+
+        // Second run in same month skips already-billed client
+        $this->actingAs($admin)->post('/admin/clients/bill-maintenance')
+            ->assertSessionHas('status');
+        $client->refresh();
+        $this->assertEquals(40500.00, $client->token_balance);
+    }
 }

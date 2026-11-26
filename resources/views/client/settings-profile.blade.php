@@ -27,6 +27,20 @@
                 <input type="text" name="sender_id" id="sender_id" value="{{ old('sender_id', $client->sender_id) }}"
                     class="w-full rounded-3xl border border-n30 bg-primary/5 px-4 py-3 text-sm" placeholder="Q4IComms" />
             </div>
+            <div>
+                <label for="low_balance_threshold" class="block font-medium mb-2">Low Wallet Balance Alert Threshold (₦)</label>
+                <input type="number" step="100" min="0" name="low_balance_threshold" id="low_balance_threshold"
+                    value="{{ old('low_balance_threshold', $client->low_balance_threshold ?? 5000) }}"
+                    class="w-full rounded-3xl border border-n30 bg-primary/5 px-4 py-3 text-sm" />
+                <p class="text-xs text-n100 mt-1">We email you automatically whenever your balance drops below this amount (set 0 to disable).</p>
+            </div>
+            <div class="rounded-2xl border border-n30 bg-primary/5 p-4 text-xs">
+                <p class="font-semibold text-sm mb-1">KYC Status: <span class="text-primary">{{ ucfirst($client->kyc_status ?? 'unverified') }}</span></p>
+                @if ($client->kyc_notes)
+                    <p class="text-n100 mb-1">Reviewer Notes: {{ $client->kyc_notes }}</p>
+                @endif
+                <p class="text-n100">Submit Certificate of Incorporation, Request Letter, and Valid ID to <strong>support@q4iltd.com</strong> for dedicated shortcode activation.</p>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <div>
                     <label for="password" class="block font-medium mb-2">New Password (optional)</label>

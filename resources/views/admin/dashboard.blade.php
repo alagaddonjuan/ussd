@@ -15,36 +15,40 @@
     </div>
 
     <div class="grid grid-cols-12 gap-4 xxl:gap-6 mb-6">
-        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30">
+        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30 border-t-2 border-t-[#0878F8]">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-3">
                 <span class="font-medium text-n200">Registered Clients</span>
-                <span class="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary"><i class="las la-users"></i></span>
+                <span class="flex size-9 items-center justify-center rounded-full bg-[#0878F8]/12 text-[#0878F8]"><i class="las la-users"></i></span>
             </div>
             <h4 class="h4">{{ number_format($totalClients) }}</h4>
+            <p class="text-xs text-n100 mt-1">Pending KYC: {{ $pendingKycCount }}</p>
         </div>
 
-        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30">
+        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30 border-t-2 border-t-[#0B3A75]">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-3">
-                <span class="font-medium text-n200">Total USSD Sessions</span>
-                <span class="flex size-9 items-center justify-center rounded-full bg-secondary/10 text-secondary"><i class="las la-sitemap"></i></span>
+                <span class="font-medium text-n200">USSD Billed / Upstream</span>
+                <span class="flex size-9 items-center justify-center rounded-full bg-[#0B3A75]/12 text-[#0B3A75] dark:text-[#22C7F8]"><i class="las la-chart-line"></i></span>
             </div>
-            <h4 class="h4">{{ number_format($totalUssd) }}</h4>
+            <h4 class="h4">₦{{ number_format($ussdClientRevenue, 2) }}</h4>
+            <p class="text-xs text-n100 mt-1">Upstream: ₦{{ number_format($ussdUpstreamCost, 2) }} &bull; Hits: {{ number_format($totalUssd) }}</p>
         </div>
 
-        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30">
+        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30 border-t-2 border-t-[#10B981]">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-3">
-                <span class="font-medium text-n200">Total SMS Dispatched</span>
-                <span class="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary"><i class="las la-sms"></i></span>
+                <span class="font-medium text-n200">Net USSD Margin</span>
+                <span class="flex size-9 items-center justify-center rounded-full bg-[#10B981]/15 text-[#10B981]"><i class="las la-percentage"></i></span>
             </div>
-            <h4 class="h4">{{ number_format($totalSms) }}</h4>
+            <h4 class="h4 text-[#10B981]">₦{{ number_format($ussdNetMargin, 2) }}</h4>
+            <p class="text-xs text-n100 mt-1">SMS Sent: {{ number_format($totalSms) }} &bull; Webhook Alerts (24h): {{ $recentWebhookErrors }}</p>
         </div>
 
-        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30">
+        <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30 border-t-2 border-t-[#6D5EF7]">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-3">
-                <span class="font-medium text-n200">Total Wallet Revenue</span>
-                <span class="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary"><i class="las la-coins"></i></span>
+                <span class="font-medium text-n200">Wallet Revenue / Maint. MRR</span>
+                <span class="flex size-9 items-center justify-center rounded-full bg-[#6D5EF7]/15 text-[#6D5EF7]"><i class="las la-coins"></i></span>
             </div>
             <h4 class="h4">₦{{ number_format($totalRevenue, 2) }}</h4>
+            <p class="text-xs text-n100 mt-1">Monthly Maint. MRR: ₦{{ number_format($activeMaintenanceMrr, 2) }}</p>
         </div>
     </div>
 
@@ -53,8 +57,8 @@
             <div class="bb-dashed mb-4 flex items-center justify-between pb-4">
                 <h4 class="h4">7-Day Platform Traffic</h4>
                 <div class="flex items-center gap-4 text-sm">
-                    <span class="flex items-center gap-2"><span class="inline-block size-3 rounded-full bg-primary"></span> USSD</span>
-                    <span class="flex items-center gap-2"><span class="inline-block size-3 rounded-full bg-secondary"></span> SMS</span>
+                    <span class="flex items-center gap-2"><span class="inline-block size-3 rounded-full bg-[#0878F8]"></span> USSD</span>
+                    <span class="flex items-center gap-2"><span class="inline-block size-3 rounded-full bg-[#22C7F8]"></span> SMS</span>
                 </div>
             </div>
             @php $maxVal = max(1, ...$ussdSeries, ...$smsSeries); @endphp
@@ -68,8 +72,8 @@
                     @endphp
                     <div class="flex flex-col items-center h-full justify-end gap-2">
                         <div class="flex items-end gap-1.5 w-full justify-center h-40">
-                            <div class="w-4 rounded-t bg-primary" style="height: {{ $uVal > 0 ? $uPct : 3 }}%" title="USSD: {{ $uVal }}"></div>
-                            <div class="w-4 rounded-t bg-secondary" style="height: {{ $sVal > 0 ? $sPct : 3 }}%" title="SMS: {{ $sVal }}"></div>
+                            <div class="w-4 rounded-t bg-[#0878F8]" style="height: {{ $uVal > 0 ? $uPct : 3 }}%" title="USSD: {{ $uVal }}"></div>
+                            <div class="w-4 rounded-t bg-[#22C7F8]" style="height: {{ $sVal > 0 ? $sPct : 3 }}%" title="SMS: {{ $sVal }}"></div>
                         </div>
                         <div class="text-center">
                             <p class="text-xs font-medium">{{ $label }}</p>
