@@ -48,7 +48,7 @@
                         </div>
                         <div class="col-span-6 md:col-span-3">
                             <label class="block text-xs font-medium mb-1">USSD Code</label>
-                            <input type="text" name="ussd_code" value="{{ $c->ussd_code }}" placeholder="*347*102#"
+                            <input type="text" name="ussd_code" value="{{ $c->ussd_code }}" placeholder="*384*23#"
                                 class="w-full rounded-xl border border-n30 bg-primary/5 px-3 py-2 text-xs" />
                         </div>
                         <div class="col-span-6 md:col-span-2">

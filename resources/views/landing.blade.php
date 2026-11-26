@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="shortcut icon" href="{{ asset('assets/images/favicon.ico') }}" type="image/x-icon" />
     <meta name="description"
-        content="Q4 International — Enterprise USSD menus, Bulk SMS, and Airtime disbursement infrastructure across MTN, Airtel, Glo, and 9mobile." />
+        content="Q4 International — Enterprise USSD menus, Bulk SMS, and Airtime disbursement infrastructure across MTN, Airtel, Glo, and T2 (9mobile)." />
     @vite(['resources/css/app.css'])
     <title>Q4 International — Enterprise USSD, SMS &amp; Airtime Platform</title>
 </head>
@@ -95,7 +95,7 @@
                 </h1>
 
                 <p class="max-w-2xl text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Deploy interactive USSD applications in minutes, deliver mission-critical Bulk SMS, and automate instant Airtime disbursements across MTN, Airtel, Glo, and 9mobile with full Africa&apos;s Talking callback precision.
+                    Deploy interactive USSD applications in minutes, deliver mission-critical Bulk SMS, and automate instant Airtime disbursements across MTN, Airtel, Glo, and T2 (9mobile) with Q4 carrier-grade infrastructure.
                 </p>
 
                 <div class="flex flex-wrap items-center gap-4 pt-2">
@@ -119,7 +119,7 @@
                     @endauth
                     <a href="#pricing"
                         class="inline-flex items-center gap-1.5 text-sm font-semibold text-[#127D66] dark:text-emerald-300 hover:underline">
-                        <span>Compare USSD Pricing Tiers</span>
+                        <span>Compare Telco Rates</span>
                         <i class="las la-angle-down"></i>
                     </a>
                 </div>
@@ -136,12 +136,12 @@
                     </div>
                     <div class="glass-card rounded-2xl p-4">
                         <p class="text-2xl font-bold text-[#0D5A51] dark:text-emerald-300">4 Telcos</p>
-                        <p class="text-xs text-slate-600 dark:text-slate-300 mt-1">MTN, Airtel, Glo, 9mobile</p>
+                        <p class="text-xs text-slate-600 dark:text-slate-300 mt-1">MTN, Airtel, Glo, T2</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Hero Frosted Glass Product Preview -->
+            <!-- Hero Frosted Glass Product Preview (Q4 Services) -->
             <div class="lg:col-span-5">
                 <div class="glass-card relative rounded-3xl p-6 sm:p-8 space-y-5">
                     <div class="flex items-center justify-between border-b border-slate-300/40 dark:border-white/10 pb-4">
@@ -150,40 +150,40 @@
                                 <i class="las la-broadcast-tower text-2xl"></i>
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-slate-900 dark:text-white">Live USSD &amp; Billing Engine</p>
-                                <p class="text-xs text-slate-500 dark:text-slate-400">Africa&apos;s Talking Webhook Ready</p>
+                                <p class="text-sm font-bold text-slate-900 dark:text-white">Q4 Services — USSD Console</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Direct Multi-Carrier Routing</p>
                             </div>
                         </div>
                         <span class="rounded-full bg-[#19B896]/20 px-3 py-1 text-xs font-semibold text-[#0D5A51] dark:text-emerald-300">
-                            Active
+                            Live
                         </span>
                     </div>
 
                     <div class="rounded-2xl bg-slate-900/90 p-5 text-white shadow-inner space-y-3 font-mono text-xs sm:text-sm">
                         <div class="flex items-center justify-between text-emerald-300">
-                            <span>Shortcode: *347*102#</span>
+                            <span>Shortcode: *384*23#</span>
                             <span class="text-[11px] bg-emerald-500/20 px-2 py-0.5 rounded-full">CON Session</span>
                         </div>
                         <div class="rounded-xl bg-white/10 p-3.5 leading-relaxed text-slate-100">
                             CON Welcome to Q4 Services<br />
-                            1. Instant Games &amp; Wallet<br />
-                            2. Airtime Top-Up<br />
+                            1. Check Account Balance<br />
+                            2. Purchase Airtime<br />
                             3. Contact Support
                         </div>
                         <div class="flex items-center justify-between text-[11px] text-slate-300 pt-1">
-                            <span>Tier Billing Model:</span>
-                            <span class="text-emerald-300 font-semibold">AT Cost × Plan Multiplier</span>
+                            <span>Session Billing:</span>
+                            <span class="text-emerald-300 font-semibold">20s / Interval (Glo 120s)</span>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div class="glass-pill rounded-2xl p-3.5">
-                            <p class="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Basic Tier</p>
-                            <p class="text-lg font-bold text-slate-900 dark:text-white mt-0.5">USSD × 4</p>
+                            <p class="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Starting MTN Rate</p>
+                            <p class="text-lg font-bold text-slate-900 dark:text-white mt-0.5">₦18.75 <span class="text-xs font-normal text-slate-500">/ 20s</span></p>
                         </div>
                         <div class="glass-pill rounded-2xl p-3.5">
-                            <p class="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Max Tier</p>
-                            <p class="text-lg font-bold text-[#127D66] dark:text-emerald-300 mt-0.5">USSD × 2.5</p>
+                            <p class="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Monthly Maintenance</p>
+                            <p class="text-lg font-bold text-[#127D66] dark:text-emerald-300 mt-0.5">₦159,500</p>
                         </div>
                     </div>
                 </div>
@@ -222,7 +222,7 @@
                 </div>
                 <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Transactional Bulk SMS</h3>
                 <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Dispatch instant OTPs, alerts, and notifications with custom Sender IDs at transparent 1x base pricing — never inflated by USSD multipliers.
+                    Dispatch instant OTPs, alerts, and customer notifications with registered Sender IDs and transparent flat per-message pricing.
                 </p>
             </div>
 
@@ -232,7 +232,7 @@
                 </div>
                 <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Automated Airtime &amp; Wallets</h3>
                 <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Programmatic airtime disbursements and real-time wallet top-ups powered by Paystack and Squad with full webhook reconciliation.
+                    Programmatic airtime disbursements and real-time wallet top-ups powered by Paystack and Squad with full reconciliation logs.
                 </p>
             </div>
 
@@ -268,7 +268,7 @@
         </div>
     </section>
 
-    <!-- Original Q4 Pricing Plans with USSD Multipliers -->
+    <!-- Exact Q4 Pricing Plans (Exact Per-Telco Interval Rates + ₦159,500 Maintenance) -->
     <section id="pricing" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div class="text-center max-w-2xl mx-auto mb-12">
             <span class="glass-pill inline-block rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wider text-[#127D66] dark:text-emerald-300 mb-3">
@@ -278,32 +278,48 @@
                 Choose the Right Plan for Your USSD Volume
             </h2>
             <p class="mt-3 text-slate-600 dark:text-slate-300">
-                Each plan sets your USSD multiplier on Africa&apos;s Talking session charges. Upgrade tiers to lower your per-session cost.
+                Sessions on MTN, Airtel, and T2 (9mobile) are billed per 20-second interval; Glo sessions are billed per 120 seconds. Active USSD plans include a ₦159,500 monthly maintenance fee.
             </p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <!-- Basic Plan (X4) -->
+            <!-- Basic Plan -->
             <div class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
                 <div>
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center justify-between mb-3">
                         <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Starter Tier</span>
                         <span class="rounded-full bg-slate-900/10 dark:bg-white/10 px-3 py-1 text-xs font-bold text-slate-800 dark:text-slate-200">
-                            USSD × 4
+                            ₦159,500 / mo Maint.
                         </span>
                     </div>
                     <h3 class="text-2xl font-bold text-slate-900 dark:text-white">Basic Plan</h3>
-                    <div class="my-5 pb-5 border-b border-slate-300/40 dark:border-white/10">
-                        <div class="flex items-baseline gap-1.5">
-                            <span class="text-4xl font-extrabold text-[#0D5A51] dark:text-emerald-300">X4</span>
-                            <span class="text-sm text-slate-600 dark:text-slate-300">Africa&apos;s Talking USSD cost</span>
-                        </div>
+                    <div class="my-4 pb-4 border-b border-slate-300/40 dark:border-white/10">
+                        <p class="text-2xl font-extrabold text-[#0D5A51] dark:text-emerald-300">₦0 – ₦199,999</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Monthly session spend tier</p>
                     </div>
-                    <ul class="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> USSD AT Charge × 4</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> SMS &amp; Airtime at 1x base rate</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Visual USSD Menu Builder</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Instant Wallet Top-up</li>
+                    <ul class="space-y-3 text-sm text-slate-700 dark:text-slate-200">
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> MTN <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦30.00</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Airtel <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦19.56</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Glo <span class="text-xs text-slate-500">(120s)</span></span>
+                            <span class="font-bold">₦48.00</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> T2 / 9mobile <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦18.00</span>
+                        </li>
+                        <li class="flex items-center gap-2 pt-2 border-t border-slate-300/30 dark:border-white/10 text-xs text-slate-600 dark:text-slate-300">
+                            <i class="las la-tools text-[#19B896] text-base"></i> Maintenance: ₦159,500 / month
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                            <i class="las la-sms text-[#19B896] text-base"></i> Bulk SMS &amp; Airtime Included
+                        </li>
                     </ul>
                 </div>
                 <a href="{{ route('register') }}"
@@ -312,27 +328,43 @@
                 </a>
             </div>
 
-            <!-- Plus Plan (X3.5) -->
+            <!-- Plus Plan -->
             <div class="glass-card rounded-3xl p-6 flex flex-col justify-between ring-2 ring-[#19B896]/60 transition-all hover:-translate-y-1">
                 <div>
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center justify-between mb-3">
                         <span class="text-xs font-bold uppercase tracking-wider text-[#127D66] dark:text-emerald-300">Popular</span>
                         <span class="rounded-full bg-[#19B896]/20 px-3 py-1 text-xs font-bold text-[#0D5A51] dark:text-emerald-300">
-                            USSD × 3.5
+                            ₦159,500 / mo Maint.
                         </span>
                     </div>
                     <h3 class="text-2xl font-bold text-slate-900 dark:text-white">Plus Plan</h3>
-                    <div class="my-5 pb-5 border-b border-slate-300/40 dark:border-white/10">
-                        <div class="flex items-baseline gap-1.5">
-                            <span class="text-4xl font-extrabold text-[#0D5A51] dark:text-emerald-300">X3.5</span>
-                            <span class="text-sm text-slate-600 dark:text-slate-300">Africa&apos;s Talking USSD cost</span>
-                        </div>
+                    <div class="my-4 pb-4 border-b border-slate-300/40 dark:border-white/10">
+                        <p class="text-2xl font-extrabold text-[#0D5A51] dark:text-emerald-300">₦200,000 – ₦599,999</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Monthly session spend tier</p>
                     </div>
-                    <ul class="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Lower USSD AT Charge × 3.5</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> SMS &amp; Airtime at 1x base rate</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> External API Node Forwarding</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Team Members &amp; CSV Exports</li>
+                    <ul class="space-y-3 text-sm text-slate-700 dark:text-slate-200">
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> MTN <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦26.25</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Airtel <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦17.12</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Glo <span class="text-xs text-slate-500">(120s)</span></span>
+                            <span class="font-bold">₦42.00</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> T2 / 9mobile <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦15.75</span>
+                        </li>
+                        <li class="flex items-center gap-2 pt-2 border-t border-slate-300/30 dark:border-white/10 text-xs text-slate-600 dark:text-slate-300">
+                            <i class="las la-tools text-[#19B896] text-base"></i> Maintenance: ₦159,500 / month
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                            <i class="las la-code text-[#19B896] text-base"></i> API Forwarding &amp; Team Access
+                        </li>
                     </ul>
                 </div>
                 <a href="{{ route('register') }}"
@@ -341,27 +373,43 @@
                 </a>
             </div>
 
-            <!-- Premium Plan (X2.9) -->
+            <!-- Premium Plan -->
             <div class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
                 <div>
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center justify-between mb-3">
                         <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Growth Tier</span>
                         <span class="rounded-full bg-[#4371e9]/15 px-3 py-1 text-xs font-bold text-[#4371e9] dark:text-blue-300">
-                            USSD × 2.9
+                            ₦159,500 / mo Maint.
                         </span>
                     </div>
                     <h3 class="text-2xl font-bold text-slate-900 dark:text-white">Premium Plan</h3>
-                    <div class="my-5 pb-5 border-b border-slate-300/40 dark:border-white/10">
-                        <div class="flex items-baseline gap-1.5">
-                            <span class="text-4xl font-extrabold text-[#0D5A51] dark:text-emerald-300">X2.9</span>
-                            <span class="text-sm text-slate-600 dark:text-slate-300">Africa&apos;s Talking USSD cost</span>
-                        </div>
+                    <div class="my-4 pb-4 border-b border-slate-300/40 dark:border-white/10">
+                        <p class="text-2xl font-extrabold text-[#0D5A51] dark:text-emerald-300">₦600,000 – ₦1,999,999</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Monthly session spend tier</p>
                     </div>
-                    <ul class="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Discounted USSD AT Charge × 2.9</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> SMS &amp; Airtime at 1x base rate</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Dedicated Shortcode Routing</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Priority Engineering Support</li>
+                    <ul class="space-y-3 text-sm text-slate-700 dark:text-slate-200">
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> MTN <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦21.75</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Airtel <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦14.18</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Glo <span class="text-xs text-slate-500">(120s)</span></span>
+                            <span class="font-bold">₦34.80</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> T2 / 9mobile <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦13.05</span>
+                        </li>
+                        <li class="flex items-center gap-2 pt-2 border-t border-slate-300/30 dark:border-white/10 text-xs text-slate-600 dark:text-slate-300">
+                            <i class="las la-tools text-[#19B896] text-base"></i> Maintenance: ₦159,500 / month
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                            <i class="las la-headset text-[#19B896] text-base"></i> Dedicated Routing &amp; Priority SLA
+                        </li>
                     </ul>
                 </div>
                 <a href="{{ route('register') }}"
@@ -370,27 +418,44 @@
                 </a>
             </div>
 
-            <!-- Max Plan (X2.5) -->
+            <!-- Max Plan -->
             <div class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
                 <div>
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center justify-between mb-3">
                         <span class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300">Enterprise</span>
                         <span class="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
-                            USSD × 2.5
+                            ₦159,500 / mo Maint.
                         </span>
                     </div>
                     <h3 class="text-2xl font-bold text-slate-900 dark:text-white">Max Plan</h3>
-                    <div class="my-5 pb-5 border-b border-slate-300/40 dark:border-white/10">
-                        <div class="flex items-baseline gap-1.5">
-                            <span class="text-4xl font-extrabold text-[#0D5A51] dark:text-emerald-300">X2.5</span>
-                            <span class="text-sm text-slate-600 dark:text-slate-300">Africa&apos;s Talking USSD cost</span>
-                        </div>
+                    <div class="my-4 pb-4 border-b border-slate-300/40 dark:border-white/10">
+                        <p class="text-2xl font-extrabold text-[#0D5A51] dark:text-emerald-300">₦2,000,000+</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Monthly session spend tier</p>
                     </div>
-                    <ul class="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Lowest USSD AT Charge × 2.5</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> SMS &amp; Airtime at 1x base rate</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> High-Volume SLA &amp; Webhooks</li>
-                        <li class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Dedicated Account Manager</li>
+                    <ul class="space-y-3 text-sm text-slate-700 dark:text-slate-200">
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> MTN <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦18.75</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Airtel <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦12.23</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> Glo <span class="text-xs text-slate-500">(120s)</span></span>
+                            <span class="font-bold">₦30.00</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2"><i class="las la-check-circle text-[#19B896] text-lg"></i> T2 / 9mobile <span class="text-xs text-slate-500">(20s)</span></span>
+                            <span class="font-bold">₦11.25</span>
+                        </li>
+                        <li class="flex items-center justify-between gap-2 pt-2 border-t border-slate-300/30 dark:border-white/10 text-xs text-slate-600 dark:text-slate-300">
+                            <span class="flex items-center gap-2"><i class="las la-tools text-[#19B896] text-base"></i> Maintenance Fee</span>
+                            <span class="font-semibold">₦159,500 / mo</span>
+                        </li>
+                        <li class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                            <i class="las la-user-tie text-[#19B896] text-base"></i> Dedicated Account Manager
+                        </li>
                     </ul>
                 </div>
                 <a href="{{ route('register') }}"
@@ -400,9 +465,9 @@
             </div>
         </div>
 
-        <p class="mt-6 text-center text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-            <strong>Billing Transparency:</strong> Tier multipliers (<strong>X4</strong> Basic, <strong>X3.5</strong> Plus, <strong>X2.9</strong> Premium, <strong>X2.5</strong> Max) apply strictly to Africa&apos;s Talking USSD session costs. SMS and Airtime remain at base rates.
-        </p>
+        <div class="glass-pill mt-6 rounded-2xl px-6 py-4 text-center text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+            <strong>Plan Terms &amp; Maintenance:</strong> Active USSD plans include a monthly channel maintenance fee of <strong>₦159,500</strong> (excluding VAT). MTN, Airtel, and T2 (9mobile) sessions are charged per 20-second interval; Glo sessions are charged per 120-second interval. Bulk SMS and Airtime remain billed at standard tier rates.
+        </div>
     </section>
 
     <!-- Why Choose Q4 & Trust Section -->
@@ -429,7 +494,7 @@
                 <img src="{{ asset('assets/q4/reliability.svg') }}" alt="Reliability" class="mx-auto h-28 w-auto object-contain" />
                 <h3 class="text-xl font-bold text-slate-900 dark:text-white">Proven Reliability</h3>
                 <p class="text-sm text-slate-600 dark:text-slate-300">
-                    Automated session recovery and direct Africa&apos;s Talking callback &amp; event webhooks built for sustained traffic spikes.
+                    Automated session recovery and direct Nigerian telco carrier gateways (MTN, Airtel, Glo, T2) built for sustained traffic spikes.
                 </p>
             </div>
 
@@ -455,31 +520,31 @@
             $faqs = [
                 [
                     'q' => 'What services does Q4 International provide?',
-                    'a' => 'Q4 International provides programmable USSD shortcodes and visual menu builders, high-delivery transactional Bulk SMS, automated Airtime disbursement, and unified developer APIs.'
+                    'a' => 'Q4 International provides programmable USSD shortcodes and visual menu builders, high-delivery transactional Bulk SMS, automated Airtime disbursement, and unified developer APIs across major mobile networks.'
                 ],
                 [
-                    'q' => 'How is my USSD billing calculated from Africa\'s Talking?',
-                    'a' => 'USSD session charges reported from Africa\'s Talking are multiplied based on your plan tier: Basic Plan (X4), Plus Plan (X3.5), Premium Plan (X2.9), and Max Plan (X2.5). Bulk SMS and Airtime remain at base rates.'
+                    'q' => 'How are USSD sessions billed across Nigerian networks?',
+                    'a' => 'MTN, Airtel, and T2 (9mobile) USSD sessions are billed per 20-second interval, while Glo sessions are billed per 120-second interval. Per-interval rates depend on your plan (Basic, Plus, Premium, or Max), plus a ₦159,500 monthly maintenance fee for active USSD channels.'
                 ],
                 [
                     'q' => 'Can I connect my own backend API to a Q4 USSD menu?',
-                    'a' => 'Yes. You can configure API nodes inside the visual USSD Menu Builder or point Africa\'s Talking webhooks directly to our high-availability gateway for dynamic menu responses.'
+                    'a' => 'Yes. Configure API nodes directly inside the Q4 Visual USSD Menu Builder or route callbacks to your HTTPS backend endpoint for live database-driven responses.'
                 ],
                 [
                     'q' => 'How do I fund my Q4 wallet balance?',
-                    'a' => 'Sign in to your portal and navigate to Billing & Wallet to fund instantly online via Paystack or Squad.'
+                    'a' => 'Sign in to your portal and open Billing & Wallet to fund your account balance online via Paystack or Squad.'
                 ],
                 [
                     'q' => 'Which mobile networks are supported?',
-                    'a' => 'We support MTN, Airtel, Glo, and 9mobile across USSD menus, Bulk SMS delivery, and instant Airtime VTU transfers.'
+                    'a' => 'We support MTN, Airtel, Glo, and T2 (9mobile) across USSD menus, Bulk SMS delivery, and instant Airtime top-ups.'
                 ],
                 [
-                    'q' => 'How is my portal account protected?',
-                    'a' => 'All accounts support Authenticator App Two-Factor Authentication (2FA), scoped API credentials, and team member role controls.'
+                    'q' => 'How long does a USSD session stay active on mobile networks?',
+                    'a' => 'Standard Nigerian telco USSD sessions remain open for up to 120 seconds total (with a 160-character screen limit per menu prompt).'
                 ],
                 [
                     'q' => 'Can I upgrade my pricing tier anytime?',
-                    'a' => 'Yes. Contact our support team or portal administrator to move between Basic (X4), Plus (X3.5), Premium (X2.9), and Max (X2.5) tiers at any time.'
+                    'a' => 'Yes. Contact Q4 International support or your portal administrator to move between Basic, Plus, Premium, and Max tiers as your monthly session volume grows.'
                 ],
             ];
         @endphp
@@ -517,7 +582,7 @@
                     <h4 class="text-base font-bold text-white">Platform Links</h4>
                     <ul class="space-y-2 text-sm text-emerald-100/85">
                         <li><a href="#services" class="hover:text-white">Services</a></li>
-                        <li><a href="#pricing" class="hover:text-white">Pricing Plans (X4 / X3.5 / X2.9 / X2.5)</a></li>
+                        <li><a href="#pricing" class="hover:text-white">Pricing Plans (Basic / Plus / Premium / Max)</a></li>
                         <li><a href="{{ route('login') }}" class="hover:text-white">Client &amp; Admin Sign In</a></li>
                         <li><a href="{{ route('register') }}" class="hover:text-white">Create Account</a></li>
                     </ul>

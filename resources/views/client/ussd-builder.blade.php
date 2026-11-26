@@ -83,11 +83,11 @@
         <div class="col-span-12 xl:col-span-4">
             <div class="box border border-n30 sticky top-24">
                 <h4 class="h4 bb-dashed pb-4 mb-4">Live USSD Simulator</h4>
-                <p class="text-xs text-n100 mb-4">Test dialing without Africa's Talking or deducting tokens. Use <strong>0</strong> to go back.</p>
+                <p class="text-xs text-n100 mb-4">Test your USSD flow in sandbox mode without deducting tokens. Use <strong>0</strong> to go back.</p>
 
                 <div class="rounded-3xl border-4 border-n700 bg-n900 p-4 text-white shadow-lg">
                     <div class="flex items-center justify-between text-xs text-n100 mb-3">
-                        <span>{{ $menu->client?->ussd_code ?: '*347*102#' }}</span>
+                        <span>{{ $menu->client?->ussd_code ?: '*384*23#' }}</span>
                         <span id="sim-badge" class="rounded bg-primary/20 px-2 py-0.5 text-primary">IDLE</span>
                     </div>
                     <pre id="sim-screen" class="min-h-[160px] whitespace-pre-wrap font-mono text-sm leading-relaxed text-white">Press "Dial Code" to start a USSD session.</pre>

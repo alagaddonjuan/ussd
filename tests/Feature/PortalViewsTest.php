@@ -48,18 +48,25 @@ class PortalViewsTest extends TestCase
             'response_text' => "Welcome\n1. Test",
         ]);
 
-        // Public Q4 landing page for visitors
+        // Public Q4 landing page for visitors (exact telco rates, maintenance fee, no upstream vendor/multipliers exposed)
         $this->get('/')
             ->assertOk()
             ->assertSee('Q4 International')
+            ->assertSee('Q4 Services')
+            ->assertSee('*384*23#')
             ->assertSee('Basic Plan')
             ->assertSee('Plus Plan')
             ->assertSee('Premium Plan')
             ->assertSee('Max Plan')
-            ->assertSee('X4')
-            ->assertSee('X3.5')
-            ->assertSee('X2.9')
-            ->assertSee('X2.5');
+            ->assertSee('₦159,500')
+            ->assertSee('₦30.00')
+            ->assertSee('₦19.56')
+            ->assertSee('₦48.00')
+            ->assertSee('₦18.00')
+            ->assertDontSee("Africa's Talking")
+            ->assertDontSee('Africa&apos;s Talking', false)
+            ->assertDontSee('*347*102#')
+            ->assertDontSee('Multiplier');
 
         // Guest routes
         $this->get('/login')->assertOk();

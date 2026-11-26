@@ -21,10 +21,8 @@ class DashboardController extends Controller
         $totalAirtime = $client->airtimeLogs()->count();
         $smsRate = $client->getServicePrice('SMS', 3.50);
         $ussdMultiplier = $client->getUssdCostMultiplier();
-        $ussdRate = $client->getServicePrice(
-            'USSD',
-            round((float) config('services.ussd.default_cost', 3.50) * $ussdMultiplier, 2)
-        );
+        $telcoRates = $client->getTelcoUssdRates();
+        $ussdRate = $client->getServicePrice('USSD', $telcoRates['mtn']['rate']);
 
         $labels = [];
         $ussdSeries = [];
@@ -73,7 +71,7 @@ class DashboardController extends Controller
             'totalAirtime',
             'smsRate',
             'ussdRate',
-            'ussdMultiplier',
+            'telcoRates',
             'labels',
             'ussdSeries',
             'smsSeries',

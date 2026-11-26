@@ -151,4 +151,21 @@ class Client extends Authenticatable
 
         return $defaultMultiplier;
     }
+
+    /**
+     * Client-facing per-interval USSD rates across Nigerian telco networks.
+     *
+     * @return array<string, array{label: string, interval: string, rate: float}>
+     */
+    public function getTelcoUssdRates(): array
+    {
+        $multiplier = $this->getUssdCostMultiplier();
+
+        return [
+            'mtn' => ['label' => 'MTN', 'interval' => '20s', 'rate' => round(7.50 * $multiplier, 2)],
+            'airtel' => ['label' => 'Airtel', 'interval' => '20s', 'rate' => round(4.89 * $multiplier, 2)],
+            'glo' => ['label' => 'Glo', 'interval' => '120s', 'rate' => round(12.00 * $multiplier, 2)],
+            't2' => ['label' => 'T2 (9mobile)', 'interval' => '20s', 'rate' => round(4.50 * $multiplier, 2)],
+        ];
+    }
 }

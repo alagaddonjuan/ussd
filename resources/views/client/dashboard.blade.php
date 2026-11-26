@@ -38,8 +38,11 @@
             </div>
             <h4 class="h4 mb-2">{{ number_format($totalUssd) }}</h4>
             <span class="text-xs text-n100">
-                USSD AT Multiplier: <strong class="text-primary">{{ rtrim(rtrim(number_format($ussdMultiplier, 2), '0'), '.') }}x</strong>
-                · Rate: ₦{{ number_format($ussdRate, 2) }}
+                {{ $client->pricingTier?->tier_name ?? 'Basic Plan' }} ·
+                MTN ₦{{ number_format($telcoRates['mtn']['rate'], 2) }}/20s ·
+                Airtel ₦{{ number_format($telcoRates['airtel']['rate'], 2) }}/20s ·
+                Glo ₦{{ number_format($telcoRates['glo']['rate'], 2) }}/120s ·
+                T2 ₦{{ number_format($telcoRates['t2']['rate'], 2) }}/20s
             </span>
         </div>
 
