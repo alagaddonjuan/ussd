@@ -15,16 +15,21 @@
     </div>
 
     <div class="grid grid-cols-12 gap-6 mb-6">
-        <!-- Send SMS -->
+        <!-- Send SMS (Single, Multi-Number & CSV Bulk Upload) -->
         <div class="box col-span-12 lg:col-span-6 border border-n30">
-            <h4 class="h4 bb-dashed pb-4 mb-4">Send SMS <span class="text-sm font-normal text-n100">(₦{{ number_format($smsRate, 2) }} / 160 chars)</span></h4>
-            <form method="POST" action="{{ route('services.sms.send') }}" class="space-y-4">
+            <h4 class="h4 bb-dashed pb-4 mb-4">Send Bulk SMS <span class="text-sm font-normal text-n100">(₦{{ number_format($smsRate, 2) }} / 160 chars)</span></h4>
+            <form method="POST" action="{{ route('services.sms.send') }}" enctype="multipart/form-data" class="space-y-4">
                 @csrf
                 <div>
-                    <label for="to" class="block font-medium mb-2">Recipient Phone Number</label>
-                    <input type="text" name="to" id="to" value="{{ old('to') }}" required
+                    <label for="to" class="block font-medium mb-2">Recipient Phone Number(s)</label>
+                    <input type="text" name="to" id="to" value="{{ old('to') }}"
                         class="w-full rounded-3xl border border-n30 bg-primary/5 px-4 py-3 text-sm"
-                        placeholder="+2348012345678" />
+                        placeholder="+2348012345678, +2348098765432 (or upload CSV below)" />
+                </div>
+                <div>
+                    <label for="recipients_csv" class="block text-xs font-medium text-n100 mb-1.5">Optional CSV / TXT Recipient List (one number per line or comma-separated)</label>
+                    <input type="file" name="recipients_csv" id="recipients_csv" accept=".csv,.txt"
+                        class="w-full rounded-2xl border border-n30 bg-primary/5 px-3 py-2 text-xs" />
                 </div>
                 <div>
                     <label for="message" class="block font-medium mb-2">Message</label>

@@ -3,10 +3,15 @@
 namespace Tests\Feature;
 
 use App\Mail\AnnouncementMail;
+use App\Mail\GatewayAlertMail;
 use App\Models\Client;
+use App\Models\WebhookLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminPortalTest extends TestCase
@@ -132,5 +137,79 @@ class AdminPortalTest extends TestCase
             ->assertSessionHas('status');
         $client->refresh();
         $this->assertEquals(40500.00, $client->token_balance);
+    }
+
+    public function test_admin_can_download_kyc_sync_perfex_invoice_replay_webhook_and_alert(): void
+    {
+        Mail::fake();
+        Storage::fake('local');
+
+        $admin = Client::create([
+            'name' => 'Super Admin',
+            'email' => 'admin3@example.com',
+            'password' => Hash::make('Password123!'),
+            'is_admin' => true,
+            'status' => 'active',
+        ]);
+
+        $kycPath = 'kyc/99/cac-doc.pdf';
+        Storage::disk('local')->put($kycPath, '%PDF-1.4 fake');
+
+        $client = Client::create([
+            'name' => 'KYC Client',
+            'email' => 'kyc@example.com',
+            'password' => Hash::make('Password123!'),
+            'ussd_code' => '*384*88#',
+            'token_balance' => 100.00,
+            'monthly_maintenance_fee' => 159500.00,
+            'kyc_status' => 'pending',
+            'kyc_document_path' => $kycPath,
+            'perfex_client_id' => 42,
+            'status' => 'active',
+        ]);
+
+        // Download KYC document
+        $this->actingAs($admin)->get("/admin/clients/{$client->id}/kyc")
+            ->assertOk();
+
+        // Sync Perfex CRM Invoice (mocked Perfex REST API)
+        config([
+            'services.perfex.url' => 'https://crm.q4iltd.com',
+            'services.perfex.api_token' => 'perfex_token_123',
+        ]);
+        Http::fake([
+            'crm.q4iltd.com/api/invoices' => Http::response(['status' => true, 'id' => 701], 200),
+        ]);
+
+        $this->actingAs($admin)->post("/admin/clients/{$client->id}/perfex-invoice")
+            ->assertSessionHas('status');
+
+        // Webhook Replay for ussd_gateway
+        $wh = WebhookLog::create([
+            'provider' => 'ussd_gateway',
+            'endpoint' => '/ussd',
+            'status_code' => 200,
+            'latency_ms' => 12,
+            'outcome' => 'rejected',
+            'payload' => json_encode([
+                'sessionId' => 'REPLAY-1',
+                'serviceCode' => '*999#',
+                'phoneNumber' => '+2348000000000',
+            ]),
+            'created_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->post("/admin/webhooks/{$wh->id}/replay")
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseHas('webhook_logs', [
+            'provider' => 'ussd_gateway',
+            'outcome' => 'replayed:rejected',
+        ]);
+
+        // Health anomaly alert triggers at threshold=1
+        config(['services.alerts.admin_email' => 'ops@q4iltd.com']);
+        $this->artisan('q4:health-check --threshold=1')->assertExitCode(0);
+        Mail::assertSent(GatewayAlertMail::class);
     }
 }

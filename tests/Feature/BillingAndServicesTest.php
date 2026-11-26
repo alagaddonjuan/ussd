@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\LowBalanceAlertMail;
+use App\Mail\MaintenanceReminderMail;
 use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\PricingTier;
@@ -10,8 +11,10 @@ use App\Models\ServicePrice;
 use App\Models\Transaction;
 use App\Models\UssdMenu;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class BillingAndServicesTest extends TestCase
@@ -161,5 +164,108 @@ class BillingAndServicesTest extends TestCase
         ])->assertSessionHas('status');
 
         Mail::assertSentTimes(LowBalanceAlertMail::class, 1);
+    }
+
+    public function test_csv_bulk_sms_rest_api_receipt_kyc_upload_and_maintenance_reminder(): void
+    {
+        Mail::fake();
+        Storage::fake('local');
+
+        $tier = PricingTier::create(['tier_name' => 'Basic Plan']);
+        ServicePrice::create(['pricing_tier_id' => $tier->id, 'service_name' => 'SMS', 'price' => 4.00]);
+
+        $client = Client::create([
+            'name' => 'Enterprise SMS Co',
+            'email' => 'enterprise@q4iltd.com',
+            'password' => Hash::make('Password123!'),
+            'token_balance' => 500.00,
+            'monthly_maintenance_fee' => 159500.00,
+            'maintenance_enabled' => true,
+            'status' => 'active',
+            'pricing_tier_id' => $tier->id,
+        ]);
+
+        $other = Client::create([
+            'name' => 'Other Co',
+            'email' => 'other@q4iltd.com',
+            'password' => Hash::make('Password123!'),
+            'token_balance' => 100.00,
+            'maintenance_enabled' => false,
+            'status' => 'active',
+        ]);
+
+        ApiKey::create([
+            'client_id' => $client->id,
+            'key_name' => 'REST Key',
+            'api_key' => 'q4_live_key_999',
+        ]);
+
+        // 1. Multi-recipient + CSV bulk SMS dispatch
+        $csvFile = UploadedFile::fake()->createWithContent('numbers.csv', "phone_number\n+2348011111111\n+2348022222222\n");
+        $this->actingAs($client)->post('/services/sms', [
+            'to' => '+2348033333333',
+            'recipients_csv' => $csvFile,
+            'message' => 'Q4 Bulk SMS test',
+        ])->assertSessionHas('status');
+
+        $client->refresh();
+        // 3 recipients * ₦4.00 = ₦12.00 deducted
+        $this->assertEquals(488.00, $client->token_balance);
+
+        // 2. REST API v1 SMS & Airtime with X-API-Key
+        $this->postJson('/api/v1/sms/send', [
+            'to' => '+2348044444444',
+            'message' => 'OTP 1234',
+        ], ['X-API-Key' => 'q4_live_key_999'])
+            ->assertOk()
+            ->assertJson(['ok' => true, 'sent' => 1]);
+
+        $this->postJson('/api/v1/airtime/vend', [
+            'phone_number' => '+2348044444444',
+            'amount' => 100,
+            'network' => 'MTN',
+        ], ['X-API-Key' => 'q4_live_key_999'])
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $client->refresh();
+        $this->assertEquals(384.00, $client->token_balance);
+
+        // 3. Transaction Receipt view + IDOR prevention
+        $tx = Transaction::create([
+            'client_id' => $client->id,
+            'type' => 'debit',
+            'reference' => 'MAINT-202611-TEST',
+            'amount' => 159500.00,
+            'tokens_purchased' => 0,
+            'status' => 'success',
+            'gateway' => 'maintenance_fee',
+            'notes' => 'Monthly Maintenance',
+        ]);
+        $this->actingAs($client)->get("/billing/transactions/{$tx->id}/receipt")
+            ->assertOk()
+            ->assertSee('MAINT-202611-TEST')
+            ->assertSee('159,500.00');
+        $this->actingAs($other)->get("/billing/transactions/{$tx->id}/receipt")
+            ->assertStatus(403);
+
+        // 4. KYC Upload
+        $kycPdf = UploadedFile::fake()->create('cac-cert.pdf', 120, 'application/pdf');
+        $this->actingAs($client)->post('/settings/profile/kyc', [
+            'kyc_document' => $kycPdf,
+            'kyc_notes' => 'RC 123456',
+        ])->assertSessionHas('status');
+
+        $client->refresh();
+        $this->assertNotNull($client->kyc_document_path);
+        $this->assertSame('pending', $client->kyc_status);
+        Storage::disk('local')->assertExists($client->kyc_document_path);
+
+        // 5. 20th-of-month Maintenance Reminder command runs once per month
+        $this->artisan('q4:remind-maintenance')->assertExitCode(0);
+        Mail::assertSentTimes(MaintenanceReminderMail::class, 1);
+
+        $this->artisan('q4:remind-maintenance')->assertExitCode(0);
+        Mail::assertSentTimes(MaintenanceReminderMail::class, 1);
     }
 }

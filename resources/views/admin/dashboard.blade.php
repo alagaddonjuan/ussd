@@ -14,6 +14,24 @@
         </div>
     </div>
 
+    @if ($recentWebhookErrors > 0)
+        <div class="mb-6 rounded-2xl border border-error/40 bg-error/10 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3 text-sm text-error font-semibold">
+                <i class="las la-exclamation-triangle text-xl"></i>
+                <span>Gateway Health Warning: {{ $recentWebhookErrors }} failed/rejected webhook event(s) in the last 24 hours.</span>
+            </div>
+            <a href="{{ route('admin.logs', ['tab' => 'webhooks']) }}" class="btn-error py-1.5 px-4 text-xs">Inspect &amp; Replay</a>
+        </div>
+    @else
+        <div class="mb-6 rounded-2xl border border-[#10B981]/30 bg-[#10B981]/10 px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 text-xs font-semibold text-[#10B981]">
+                <span class="inline-block h-2.5 w-2.5 rounded-full bg-[#10B981]"></span>
+                <span>Gateway Health Monitor: All USSD &amp; billing webhook channels operating normally (0 errors in last 24h).</span>
+            </div>
+            <a href="{{ route('admin.logs', ['tab' => 'webhooks']) }}" class="text-xs font-semibold text-[#0B3A75] dark:text-[#22C7F8] hover:underline">View Telemetry &rarr;</a>
+        </div>
+    @endif
+
     <div class="grid grid-cols-12 gap-4 xxl:gap-6 mb-6">
         <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30 border-t-2 border-t-[#0878F8]">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-3">

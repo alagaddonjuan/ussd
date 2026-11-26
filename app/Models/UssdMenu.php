@@ -35,4 +35,9 @@ class UssdMenu extends Model
     {
         return $this->hasMany(UssdMenuItem::class, 'menu_id')->orderBy('id');
     }
+
+    public function versions(): HasMany
+    {
+        return $this->hasMany(UssdMenuVersion::class, 'menu_id')->orderByDesc('version_number');
+    }
 }

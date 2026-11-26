@@ -77,6 +77,8 @@ Route::middleware(['auth', 'active.client'])->group(function () {
     Route::delete('/ussd-menus/{menu}', [UssdMenuController::class, 'archive'])->name('ussd.menus.archive');
     Route::post('/ussd-menus/{menu}/items', [UssdMenuController::class, 'storeItem'])->name('ussd.items.store');
     Route::post('/ussd-menus/{menu}/import-text', [UssdMenuController::class, 'importText'])->name('ussd.menus.import-text');
+    Route::post('/ussd-menus/{menu}/versions', [UssdMenuController::class, 'storeSnapshot'])->name('ussd.menus.snapshot');
+    Route::post('/ussd-menus/{menu}/versions/{version}/restore', [UssdMenuController::class, 'restoreVersion'])->name('ussd.menus.restore');
     Route::post('/ussd-menus/{menu}/test-api', [UssdMenuController::class, 'testApiNode'])->name('ussd.menus.test-api');
     Route::put('/ussd-items/{item}', [UssdMenuController::class, 'updateItem'])->name('ussd.items.update');
     Route::delete('/ussd-items/{item}', [UssdMenuController::class, 'destroyItem'])->name('ussd.items.destroy');
@@ -84,6 +86,7 @@ Route::middleware(['auth', 'active.client'])->group(function () {
 
     // Billing & Wallet
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
+    Route::get('/billing/transactions/{transaction}/receipt', [BillingController::class, 'receipt'])->name('billing.receipt');
     Route::post('/billing/paystack', [BillingController::class, 'initializePaystack'])->name('billing.paystack');
     Route::get('/billing/verify', [BillingController::class, 'verifyPaystack'])->name('billing.verify');
 
@@ -101,6 +104,7 @@ Route::middleware(['auth', 'active.client'])->group(function () {
     // Account Settings & 2FA
     Route::get('/settings/profile', [SettingsController::class, 'profile'])->name('settings.profile');
     Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile.update');
+    Route::post('/settings/profile/kyc', [SettingsController::class, 'uploadKyc'])->name('settings.kyc.upload');
     Route::get('/settings/security', [SettingsController::class, 'security'])->name('settings.security');
     Route::post('/settings/security/2fa/generate', [SettingsController::class, 'generateTwoFactor'])->name('settings.2fa.generate');
     Route::post('/settings/security/2fa/enable', [SettingsController::class, 'enableTwoFactor'])->name('settings.2fa.enable');
@@ -115,6 +119,8 @@ Route::middleware(['auth', 'active.client'])->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/clients', [AdminController::class, 'clients'])->name('clients');
         Route::put('/clients/{client}', [AdminController::class, 'updateClient'])->name('clients.update');
+        Route::get('/clients/{client}/kyc', [AdminController::class, 'downloadKyc'])->name('clients.kyc.download');
+        Route::post('/clients/{client}/perfex-invoice', [AdminController::class, 'pushPerfexInvoice'])->name('clients.perfex-invoice');
         Route::post('/clients/{client}/transaction', [AdminController::class, 'manualTransaction'])->name('clients.transaction');
         Route::post('/clients/bill-maintenance', [AdminController::class, 'chargeMaintenance'])->name('clients.bill-maintenance');
 
@@ -125,6 +131,7 @@ Route::middleware(['auth', 'active.client'])->group(function () {
         Route::post('/telco-rates', [AdminController::class, 'storeTelcoRate'])->name('telco-rates.store');
 
         Route::get('/logs', [AdminController::class, 'logs'])->name('logs');
+        Route::post('/webhooks/{webhookLog}/replay', [AdminController::class, 'replayWebhook'])->name('webhooks.replay');
         Route::get('/reports/{type}', [AdminController::class, 'exportCsv'])->name('reports.export');
 
         Route::get('/ussd-menus', [AdminController::class, 'ussdMenus'])->name('ussd-menus');

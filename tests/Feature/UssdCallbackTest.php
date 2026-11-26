@@ -365,5 +365,39 @@ class UssdCallbackTest extends TestCase
             'text' => '1*1*1',
         ])->assertOk();
         $this->assertSame('END Balls submitted', $rDeep->getContent());
+
+        // Snapshot & Rollback test: save v1 or verify auto-snapshot works cleanly
+        $this->actingAs($client)->post("/ussd-menus/{$menu->id}/versions", [
+            'label' => 'Production Release 1',
+        ])->assertSessionHas('status');
+
+        $version = $menu->versions()->firstOrFail();
+
+        // Replace menu with a simple screen (auto-creates v2 backup before replace)
+        $this->actingAs($client)->post("/ussd-menus/{$menu->id}/import-text", [
+            'menu_text' => "Temporary Screen [END: Down for maintenance]",
+            'mode' => 'replace',
+            'default_leaf_type' => 'END',
+        ])->assertSessionHas('status');
+
+        $rTemp = $this->post('/ussd', [
+            'sessionId' => 'SIM-TEXT-TEMP',
+            'serviceCode' => '*384*500#',
+            'phoneNumber' => '+2348010000001',
+            'text' => '',
+        ])->assertOk();
+        $this->assertSame('END Down for maintenance', $rTemp->getContent());
+
+        // Restore back to v1 ("Production Release 1")
+        $this->actingAs($client)->post("/ussd-menus/{$menu->id}/versions/{$version->id}/restore")
+            ->assertSessionHas('status');
+
+        $rRestored = $this->post('/ussd', [
+            'sessionId' => 'SIM-TEXT-RESTORED',
+            'serviceCode' => '*384*500#',
+            'phoneNumber' => '+2348010000001',
+            'text' => '',
+        ])->assertOk();
+        $this->assertSame("CON Welcome to Q4 Services\n1. Play Games\n2. Support", $rRestored->getContent());
     }
 }

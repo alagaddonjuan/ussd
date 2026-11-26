@@ -7,6 +7,7 @@ use App\Services\TwoFactorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
@@ -44,6 +45,31 @@ class SettingsController extends Controller
         $client->update($updates);
 
         return back()->with('status', 'Profile settings updated.');
+    }
+
+    public function uploadKyc(Request $request): RedirectResponse
+    {
+        $client = $request->user();
+
+        $data = $request->validate([
+            'kyc_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'kyc_notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($client->kyc_document_path && Storage::disk('local')->exists($client->kyc_document_path)) {
+            Storage::disk('local')->delete($client->kyc_document_path);
+        }
+
+        $path = $data['kyc_document']->store("kyc/{$client->id}", 'local');
+
+        $client->update([
+            'kyc_document_path' => $path,
+            'kyc_submitted_at' => now(),
+            'kyc_status' => $client->kyc_status === 'approved' ? 'approved' : 'pending',
+            'kyc_notes' => $data['kyc_notes'] ?? $client->kyc_notes,
+        ]);
+
+        return back()->with('status', 'KYC document uploaded successfully. Verification is now pending review.');
     }
 
     public function security(Request $request, TwoFactorService $twoFactor): View

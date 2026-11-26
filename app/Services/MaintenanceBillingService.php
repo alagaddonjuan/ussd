@@ -2,14 +2,19 @@
 
 namespace App\Services;
 
+use App\Mail\MaintenanceReminderMail;
 use App\Models\Client;
 use App\Models\Transaction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class MaintenanceBillingService
 {
-    public function __construct(protected LowBalanceNotifier $notifier) {}
+    public function __construct(
+        protected LowBalanceNotifier $notifier,
+        protected ?PerfexCrmService $perfex = null
+    ) {}
 
     /**
      * Deduct monthly maintenance fees (default ₦159,500) for active non-admin clients due this month.
@@ -33,6 +38,9 @@ class MaintenanceBillingService
             'total_collected' => 0.0,
         ];
 
+        $perfex = $this->perfex ?? app(PerfexCrmService::class);
+        $syncPerfex = (bool) config('services.perfex.auto_sync_invoices', false) && $perfex->isConfigured();
+
         foreach ($clients as $client) {
             $fee = round((float) ($client->monthly_maintenance_fee ?? 159500.00), 2);
             if ($fee <= 0) {
@@ -47,10 +55,10 @@ class MaintenanceBillingService
                 continue;
             }
 
-            $outcome = DB::transaction(function () use ($client, $fee, $suspendOnShortfall): string {
+            $result = DB::transaction(function () use ($client, $fee, $suspendOnShortfall): array {
                 $locked = Client::query()->whereKey($client->id)->lockForUpdate()->first();
                 if (! $locked || $locked->status !== 'active') {
-                    return 'skipped';
+                    return ['status' => 'skipped', 'transaction' => null];
                 }
 
                 if ((float) $locked->token_balance < $fee) {
@@ -58,13 +66,13 @@ class MaintenanceBillingService
                         $locked->update(['status' => 'suspended']);
                     }
 
-                    return 'insufficient';
+                    return ['status' => 'insufficient', 'transaction' => null];
                 }
 
                 $locked->decrement('token_balance', $fee);
                 $locked->update(['last_maintenance_billed_at' => now()]);
 
-                Transaction::create([
+                $tx = Transaction::create([
                     'client_id' => $locked->id,
                     'type' => 'debit',
                     'reference' => 'MAINT-'.now()->format('Ym').'-'.$locked->id.'-'.random_int(100, 999),
@@ -76,15 +84,24 @@ class MaintenanceBillingService
                     'created_at' => now(),
                 ]);
 
-                return 'billed';
+                return ['status' => 'billed', 'transaction' => $tx];
             });
 
-            if ($outcome === 'billed') {
+            if ($result['status'] === 'billed') {
                 $summary['billed']++;
                 $summary['total_collected'] += $fee;
                 $client->refresh();
                 $this->notifier->checkAndNotify($client);
-            } elseif ($outcome === 'insufficient') {
+
+                if ($syncPerfex && $result['transaction']) {
+                    $perfex->pushInvoice(
+                        $client,
+                        $fee,
+                        'Monthly USSD Channel Maintenance ('.now()->format('M Y').')',
+                        $result['transaction']
+                    );
+                }
+            } elseif ($result['status'] === 'insufficient') {
                 $summary['insufficient']++;
             } else {
                 $summary['skipped']++;
@@ -94,5 +111,40 @@ class MaintenanceBillingService
         $summary['total_collected'] = round($summary['total_collected'], 2);
 
         return $summary;
+    }
+
+    /**
+     * Send 20th-of-month upcoming maintenance notice emails to active clients not yet reminded this month.
+     */
+    public function sendUpcomingReminders(bool $forceCurrentMonth = false): int
+    {
+        $monthStart = Carbon::now()->startOfMonth();
+        $clients = Client::query()
+            ->where(fn ($q) => $q->where('is_admin', false)->orWhereNull('is_admin'))
+            ->where('status', 'active')
+            ->where('maintenance_enabled', true)
+            ->orderBy('id')
+            ->get();
+
+        $sent = 0;
+        foreach ($clients as $client) {
+            $fee = round((float) ($client->monthly_maintenance_fee ?? 159500.00), 2);
+            if ($fee <= 0 || ! $client->email) {
+                continue;
+            }
+
+            if (! $forceCurrentMonth && $client->maintenance_reminded_at && $client->maintenance_reminded_at->gte($monthStart)) {
+                continue;
+            }
+
+            try {
+                Mail::to($client->email)->send(new MaintenanceReminderMail($client, $fee));
+                $client->update(['maintenance_reminded_at' => now()]);
+                $sent++;
+            } catch (\Throwable) {
+            }
+        }
+
+        return $sent;
     }
 }

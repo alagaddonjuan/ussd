@@ -64,6 +64,27 @@ class DashboardController extends Controller
             ->limit(6)
             ->get();
 
+        $allClientUssd = UssdLog::query()
+            ->where('client_id', $client->id)
+            ->get(['status', 'duration_ms', 'hops', 'network_name']);
+
+        $completedSessions = $allClientUssd->filter(fn ($row) => stripos((string) $row->status, 'incomplete') === false)->count();
+        $incompleteSessions = max(0, $allClientUssd->count() - $completedSessions);
+        $completionRate = $allClientUssd->isNotEmpty()
+            ? round(($completedSessions / $allClientUssd->count()) * 100, 1)
+            : 100.0;
+        $avgDurationSec = $allClientUssd->whereNotNull('duration_ms')->isNotEmpty()
+            ? round(((float) $allClientUssd->whereNotNull('duration_ms')->avg('duration_ms')) / 1000, 1)
+            : 0.0;
+        $avgHops = $allClientUssd->whereNotNull('hops')->isNotEmpty()
+            ? round((float) $allClientUssd->whereNotNull('hops')->avg('hops'), 1)
+            : 0.0;
+        $carrierBreakdown = $allClientUssd
+            ->groupBy(fn ($row) => $row->network_name ?: 'Other')
+            ->map->count()
+            ->sortDesc()
+            ->all();
+
         return view('client.dashboard', compact(
             'client',
             'totalSms',
@@ -76,7 +97,13 @@ class DashboardController extends Controller
             'ussdSeries',
             'smsSeries',
             'recentTransactions',
-            'recentUssdLogs'
+            'recentUssdLogs',
+            'completedSessions',
+            'incompleteSessions',
+            'completionRate',
+            'avgDurationSec',
+            'avgHops',
+            'carrierBreakdown'
         ));
     }
 }

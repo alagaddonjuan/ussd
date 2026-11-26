@@ -36,18 +36,25 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-n100">KYC Verification Status</p>
                 <h5 class="h5 mt-1">{{ ucfirst($client->kyc_status ?? 'unverified') }}</h5>
-                <p class="text-xs text-n100 mt-1">Send CAC / Request Letter / Valid ID to support@q4iltd.com</p>
+                <p class="text-xs text-n100 mt-1">
+                    @if ($client->kyc_document_path)
+                        Document uploaded ({{ basename($client->kyc_document_path) }})
+                    @else
+                        Upload CAC / Request Letter / Valid ID directly in settings
+                    @endif
+                </p>
             </div>
-            <a href="{{ route('settings.profile') }}" class="btn-outline py-1.5 px-4 text-xs">Manage Alerts</a>
+            <a href="{{ route('settings.profile') }}#kyc" class="btn-outline py-1.5 px-4 text-xs">Upload KYC Docs</a>
         </div>
     </div>
 
     <div class="grid grid-cols-12 gap-6">
         <div class="box col-span-12 lg:col-span-4 border border-n30">
-            <h4 class="h4 bb-dashed pb-4 mb-4">Fund Wallet via Paystack</h4>
+            <h4 class="h4 bb-dashed pb-4 mb-4">Wallet Funding &amp; CRM Invoices</h4>
             @if (! $paystackReady)
-                <div class="mb-4 rounded-xl bg-warning/10 p-3 text-xs text-warning">
-                    Paystack keys are not set in <code>.env</code> yet (<code>PAYSTACK_SECRET_KEY</code>). Add them to enable live checkout.
+                <div class="mb-4 rounded-xl bg-primary/10 p-3.5 text-xs text-[#0B3A75] dark:text-[#22C7F8] space-y-1.5">
+                    <p class="font-bold">Direct Q4 Payment Gateway Integration Pending</p>
+                    <p>Online self-checkout is paused while Q4I finalizes direct payment integration. Recurring invoices are managed via <strong>crm.q4iltd.com</strong>, or contact <strong>support@q4iltd.com</strong> for instant wallet credits.</p>
                 </div>
             @endif
             <form method="POST" action="{{ route('billing.paystack') }}" class="space-y-4">
@@ -59,7 +66,7 @@
                 </div>
                 <button type="submit" class="btn-primary w-full justify-center">
                     <i class="las la-credit-card"></i>
-                    <span>Pay with Paystack</span>
+                    <span>Fund Wallet</span>
                 </button>
             </form>
         </div>
@@ -76,6 +83,7 @@
                             <th class="px-4 py-3 text-start">Amount</th>
                             <th class="px-4 py-3 text-start">Status</th>
                             <th class="px-4 py-3 text-start">Date</th>
+                            <th class="px-4 py-3 text-start">Receipt</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -92,9 +100,14 @@
                                     </span>
                                 </td>
                                 <td class="px-4 py-2.5 text-xs text-n100">{{ optional($tx->created_at)->format('Y-m-d H:i') }}</td>
+                                <td class="px-4 py-2.5">
+                                    <a href="{{ route('billing.receipt', $tx) }}" class="text-xs font-semibold text-[#0878F8] hover:underline">
+                                        <i class="las la-file-invoice"></i> View / PDF
+                                    </a>
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="px-4 py-6 text-center text-n100">No transactions yet.</td></tr>
+                            <tr><td colspan="7" class="px-4 py-6 text-center text-n100">No transactions yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

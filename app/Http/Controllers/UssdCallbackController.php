@@ -63,8 +63,12 @@ class UssdCallbackController extends Controller
                 'payload' => mb_substr(json_encode([
                     'sessionId' => $request->input('sessionId'),
                     'serviceCode' => $request->input('serviceCode'),
+                    'phoneNumber' => $request->input('phoneNumber'),
+                    'networkCode' => $request->input('networkCode'),
                     'durationInMillis' => $request->input('durationInMillis'),
+                    'hopsCount' => $request->input('hopsCount'),
                     'cost' => $request->input('cost'),
+                    'status' => $request->input('status'),
                 ]) ?: '', 0, 450),
                 'created_at' => now(),
             ]);

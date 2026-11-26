@@ -47,22 +47,35 @@ class ServiceController extends Controller
     public function sendSms(Request $request, AfricasTalkingService $at, LowBalanceNotifier $notifier): RedirectResponse
     {
         $data = $request->validate([
-            'to' => ['required', 'string', 'max:32'],
+            'to' => ['nullable', 'string', 'max:5000'],
+            'recipients_csv' => ['nullable', 'file', 'mimes:csv,txt', 'max:2048'],
             'message' => ['required', 'string', 'max:1600'],
         ]);
+
+        $rawTo = trim((string) ($data['to'] ?? ''));
+        if ($request->hasFile('recipients_csv')) {
+            $csvContent = (string) file_get_contents($request->file('recipients_csv')->getRealPath());
+            $rawTo .= ($rawTo !== '' ? ',' : '').$csvContent;
+        }
+
+        $recipients = $this->parseRecipients($rawTo);
+        if (empty($recipients)) {
+            return back()->withInput()->withErrors(['to' => 'Provide at least one recipient phone number or upload a CSV/TXT file.']);
+        }
 
         $client = $request->user();
         $rate = $client->getServicePrice('SMS', 3.50);
         $pages = max(1, (int) ceil(mb_strlen($data['message']) / 160));
-        $cost = round($pages * $rate, 2);
+        $unitCost = round($pages * $rate, 2);
+        $totalCost = round($unitCost * count($recipients), 2);
 
-        $charged = DB::transaction(function () use ($client, $cost): bool {
+        $charged = DB::transaction(function () use ($client, $totalCost): bool {
             $locked = Client::query()->whereKey($client->id)->lockForUpdate()->first();
-            if (! $locked || (float) $locked->token_balance < $cost) {
+            if (! $locked || (float) $locked->token_balance < $totalCost) {
                 return false;
             }
 
-            $locked->decrement('token_balance', $cost);
+            $locked->decrement('token_balance', $totalCost);
 
             return true;
         });
@@ -70,43 +83,85 @@ class ServiceController extends Controller
         if (! $charged) {
             return back()
                 ->withInput()
-                ->withErrors(['sms' => "Insufficient token balance. Required: ₦{$cost}."]);
+                ->withErrors(['sms' => "Insufficient token balance. Required: ₦{$totalCost} for ".count($recipients).' recipient(s).']);
         }
 
-        $result = $at->sendSms($data['to'], $data['message'], $client->sender_id);
+        $sent = 0;
+        $failed = 0;
+        $lastError = null;
+        $lastStatus = 'Dispatched';
 
-        if (! $result['ok']) {
-            Client::query()->whereKey($client->id)->increment('token_balance', $cost);
+        foreach ($recipients as $recipient) {
+            $result = $at->sendSms($recipient, $data['message'], $client->sender_id);
 
+            if (! $result['ok']) {
+                $failed++;
+                $lastError = $result['message'];
+                Client::query()->whereKey($client->id)->increment('token_balance', $unitCost);
+
+                SmsLog::create([
+                    'client_id' => $client->id,
+                    'sender_id' => $client->sender_id ?: 'System',
+                    'phone_number' => $recipient,
+                    'message' => $data['message'],
+                    'cost' => 0,
+                    'status' => 'Failed',
+                    'created_at' => now(),
+                ]);
+
+                continue;
+            }
+
+            $sent++;
+            $lastStatus = $result['status'];
             SmsLog::create([
                 'client_id' => $client->id,
                 'sender_id' => $client->sender_id ?: 'System',
-                'phone_number' => $data['to'],
+                'phone_number' => $recipient,
                 'message' => $data['message'],
-                'cost' => 0,
-                'status' => 'Failed',
+                'cost' => $unitCost,
+                'status' => $result['status'],
                 'created_at' => now(),
             ]);
-
-            return back()
-                ->withInput()
-                ->withErrors(['sms' => $result['message']]);
         }
-
-        SmsLog::create([
-            'client_id' => $client->id,
-            'sender_id' => $client->sender_id ?: 'System',
-            'phone_number' => $data['to'],
-            'message' => $data['message'],
-            'cost' => $cost,
-            'status' => $result['status'],
-            'created_at' => now(),
-        ]);
 
         $client->refresh();
         $notifier->checkAndNotify($client);
 
-        return back()->with('status', "SMS dispatched ({$result['status']}). Cost: ₦{$cost}.");
+        if ($sent === 0) {
+            return back()
+                ->withInput()
+                ->withErrors(['sms' => $lastError ?: 'SMS dispatch failed for all recipients.']);
+        }
+
+        $actualCost = round($sent * $unitCost, 2);
+        $summary = count($recipients) === 1
+            ? "SMS dispatched ({$lastStatus}). Cost: ₦{$actualCost}."
+            : "Bulk SMS finished: {$sent} sent, {$failed} failed. Total Cost: ₦{$actualCost}.";
+
+        return back()->with('status', $summary);
+    }
+
+    /**
+     * Extract unique phone numbers from comma/newline-separated input or uploaded CSV content.
+     *
+     * @return array<int, string>
+     */
+    protected function parseRecipients(string $raw): array
+    {
+        $tokens = preg_split('/[\r\n,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $numbers = [];
+        foreach ($tokens as $token) {
+            $clean = trim($token, " \t\"'");
+            if ($clean === '' || strcasecmp($clean, 'phone') === 0 || strcasecmp($clean, 'phone_number') === 0 || strcasecmp($clean, 'msisdn') === 0) {
+                continue;
+            }
+            if (preg_match('/^\+?[0-9]{7,18}$/', $clean)) {
+                $numbers[] = $clean;
+            }
+        }
+
+        return array_values(array_unique($numbers));
     }
 
     public function sendAirtime(Request $request, AfricasTalkingService $at, LowBalanceNotifier $notifier): RedirectResponse

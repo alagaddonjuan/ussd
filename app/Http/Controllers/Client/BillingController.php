@@ -27,6 +27,21 @@ class BillingController extends Controller
         return view('client.billing', compact('client', 'transactions', 'paystackReady'));
     }
 
+    public function receipt(Request $request, Transaction $transaction): View
+    {
+        $user = $request->user();
+        if (! $user->isAdmin() && (int) $transaction->client_id !== (int) $user->id) {
+            abort(403, 'You do not have permission to view this receipt.');
+        }
+
+        $transaction->load('client');
+
+        return view('client.receipt', [
+            'client' => $transaction->client ?? $user,
+            'transaction' => $transaction,
+        ]);
+    }
+
     public function initializePaystack(Request $request, PaystackService $paystack): RedirectResponse
     {
         $data = $request->validate([

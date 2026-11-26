@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ServiceApiController;
 use App\Http\Controllers\UssdCallbackController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +30,11 @@ Route::get('/health', function () {
 Route::prefix('v1/ussd')->group(function () {
     Route::post('/', [UssdCallbackController::class, 'handle']);
     Route::post('/events', [UssdCallbackController::class, 'events']);
+});
+
+Route::prefix('v1')->group(function () {
+    Route::post('/sms/send', [ServiceApiController::class, 'sendSms'])->name('api.sms.send');
+    Route::post('/airtime/vend', [ServiceApiController::class, 'sendAirtime'])->name('api.airtime.vend');
 });
 
 Route::post('/ussd', [UssdCallbackController::class, 'handle']);

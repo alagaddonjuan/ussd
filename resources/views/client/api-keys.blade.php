@@ -78,9 +78,22 @@
             </div>
         </div>
 
-        <pre id="doc-code-curl" class="doc-pane rounded-2xl bg-[#0B3A75] text-slate-100 p-4 text-xs font-mono overflow-x-auto">curl -X POST {{ url('/ussd') }} \
+        <pre id="doc-code-curl" class="doc-pane rounded-2xl bg-[#0B3A75] text-slate-100 p-4 text-xs font-mono overflow-x-auto"># 1. USSD Callback Test
+curl -X POST {{ url('/ussd') }} \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "sessionId=SESSION_001&amp;serviceCode={{ $client->ussd_code ?: '*384*23#' }}&amp;phoneNumber=+2348000000000&amp;text="</pre>
+  -d "sessionId=SESSION_001&amp;serviceCode={{ $client->ussd_code ?: '*384*23#' }}&amp;phoneNumber=+2348000000000&amp;text="
+
+# 2. Programmatic Bulk SMS API
+curl -X POST {{ url('/api/v1/sms/send') }} \
+  -H "X-API-Key: {{ $apiKeys->first()?->api_key ?? 'YOUR_API_KEY' }}" \
+  -H "Content-Type: application/json" \
+  -d '{"to":"+2348012345678","message":"Your Q4 OTP is 492018"}'
+
+# 3. Programmatic Airtime API
+curl -X POST {{ url('/api/v1/airtime/vend') }} \
+  -H "X-API-Key: {{ $apiKeys->first()?->api_key ?? 'YOUR_API_KEY' }}" \
+  -H "Content-Type: application/json" \
+  -d '{"phone_number":"+2348012345678","amount":100,"network":"MTN"}'</pre>
 
         <pre id="doc-code-php" class="doc-pane hidden rounded-2xl bg-[#0B3A75] text-slate-100 p-4 text-xs font-mono overflow-x-auto">&lt;?php
 // External USSD Webhook Handler (set inside USSD Menu Builder API node)

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\UssdLog;
 use App\Models\UssdMenu;
 use App\Models\UssdMenuItem;
+use App\Models\UssdMenuVersion;
 use App\Services\TextMenuParserService;
 use App\Services\UssdEngineService;
 use Illuminate\Http\JsonResponse;
@@ -76,6 +77,7 @@ class UssdMenuController extends Controller
         $items = $menu->items()->orderBy('id')->get();
         $tree = $this->buildTree($items);
         $menuTextOutline = $parser->toText($items);
+        $versions = $menu->versions()->limit(10)->get();
 
         return view('client.ussd-builder', [
             'client' => $request->user(),
@@ -83,6 +85,7 @@ class UssdMenuController extends Controller
             'items' => $items,
             'tree' => $tree,
             'menuTextOutline' => $menuTextOutline,
+            'versions' => $versions,
         ]);
     }
 
@@ -109,6 +112,10 @@ class UssdMenuController extends Controller
             }
         }
 
+        if ($menu->items()->exists()) {
+            $this->recordSnapshot($menu, $parser, 'Auto backup before text '.$data['mode'], $request->user()?->id);
+        }
+
         $count = $parser->importIntoMenu(
             $menu,
             $data['menu_text'],
@@ -121,7 +128,59 @@ class UssdMenuController extends Controller
             return back()->withErrors(['menu_text' => 'Could not parse any menu steps from the provided outline.']);
         }
 
-        return back()->with('status', "Built {$count} menu step(s) from text outline.");
+        return back()->with('status', "Built {$count} menu step(s) from text outline (previous state saved in Version History).");
+    }
+
+    public function storeSnapshot(Request $request, UssdMenu $menu, TextMenuParserService $parser): RedirectResponse
+    {
+        $this->authorizeMenu($request, $menu);
+        $data = $request->validate([
+            'label' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $version = $this->recordSnapshot(
+            $menu,
+            $parser,
+            $data['label'] ?: 'Manual Snapshot',
+            $request->user()?->id
+        );
+
+        return back()->with('status', "Saved menu snapshot v{$version->version_number}.");
+    }
+
+    public function restoreVersion(Request $request, UssdMenu $menu, UssdMenuVersion $version, TextMenuParserService $parser): RedirectResponse
+    {
+        $this->authorizeMenu($request, $menu);
+        if ((int) $version->menu_id !== (int) $menu->id) {
+            abort(403, 'Snapshot does not belong to this menu.');
+        }
+
+        $snapshot = json_decode((string) $version->snapshot_json, true);
+        if (! is_array($snapshot)) {
+            return back()->withErrors(['version' => 'Saved snapshot data is corrupted or empty.']);
+        }
+
+        $this->recordSnapshot($menu, $parser, "Backup before restore to v{$version->version_number}", $request->user()?->id);
+
+        DB::transaction(function () use ($menu, $snapshot): void {
+            $menu->items()->delete();
+            $idMap = [];
+            foreach ($snapshot as $row) {
+                $oldParent = $row['parent_item_id'] ?? null;
+                $newItem = UssdMenuItem::create([
+                    'menu_id' => $menu->id,
+                    'parent_item_id' => $oldParent ? ($idMap[$oldParent] ?? null) : null,
+                    'option_trigger' => (string) ($row['option_trigger'] ?? '1'),
+                    'response_type' => (string) ($row['response_type'] ?? 'CON'),
+                    'response_text' => (string) ($row['response_text'] ?? ''),
+                ]);
+                if (isset($row['id'])) {
+                    $idMap[$row['id']] = $newItem->id;
+                }
+            }
+        });
+
+        return back()->with('status', "Restored menu to snapshot v{$version->version_number}.");
     }
 
     public function setActive(Request $request, UssdMenu $menu): RedirectResponse
@@ -304,6 +363,31 @@ class UssdMenuController extends Controller
         if (! $user->isAdmin() && (int) $menu->client_id !== (int) $user->id) {
             abort(403, 'You do not have permission to access this USSD menu.');
         }
+    }
+
+    /**
+     * Save a recoverable JSON + text snapshot of the current menu items.
+     */
+    protected function recordSnapshot(UssdMenu $menu, TextMenuParserService $parser, string $label, ?int $actorId = null): UssdMenuVersion
+    {
+        $items = $menu->items()->orderBy('id')->get();
+        $nextNumber = ((int) ($menu->versions()->max('version_number') ?? 0)) + 1;
+
+        return UssdMenuVersion::create([
+            'menu_id' => $menu->id,
+            'version_number' => $nextNumber,
+            'label' => $label,
+            'outline_text' => $parser->toText($items),
+            'snapshot_json' => json_encode($items->map(fn ($item) => [
+                'id' => $item->id,
+                'parent_item_id' => $item->parent_item_id,
+                'option_trigger' => $item->option_trigger,
+                'response_type' => $item->response_type,
+                'response_text' => $item->response_text,
+            ])->values()->all()),
+            'created_by' => $actorId,
+            'created_at' => now(),
+        ]);
     }
 
     /**

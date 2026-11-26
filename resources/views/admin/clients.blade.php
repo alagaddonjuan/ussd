@@ -47,7 +47,24 @@
                             @if ($c->last_maintenance_billed_at)
                                 (Last: {{ $c->last_maintenance_billed_at->format('M d') }})
                             @endif
+                            @if ($c->perfex_client_id)
+                                &bull; Perfex #{{ $c->perfex_client_id }}
+                            @endif
                         </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        @if ($c->kyc_document_path)
+                            <a href="{{ route('admin.clients.kyc.download', $c) }}" class="btn-outline py-1.5 px-3 text-xs">
+                                <i class="las la-file-download"></i> View KYC Doc
+                            </a>
+                        @endif
+                        <form method="POST" action="{{ route('admin.clients.perfex-invoice', $c) }}">
+                            @csrf
+                            <button type="submit" class="btn-secondary py-1.5 px-3 text-xs"
+                                title="{{ $perfexConfigured ? 'Create invoice in crm.q4iltd.com' : 'Configure PERFEX_API_TOKEN in .env first' }}">
+                                <i class="las la-file-invoice"></i> Sync Perfex Invoice
+                            </button>
+                        </form>
                     </div>
                 </div>
 
@@ -98,13 +115,15 @@
                             <input type="number" step="100" min="0" name="monthly_maintenance_fee" value="{{ $c->monthly_maintenance_fee ?? 159500 }}"
                                 class="w-full rounded-xl border border-n30 bg-primary/5 px-2.5 py-2 text-xs" />
                         </div>
-                        <div class="col-span-8 md:col-span-8 flex items-center gap-3">
+                        <div class="col-span-8 md:col-span-8 flex flex-wrap items-center gap-3">
                             <label class="inline-flex items-center gap-1.5 text-xs cursor-pointer">
                                 <input type="checkbox" name="maintenance_enabled" value="1" @checked($c->maintenance_enabled ?? true) />
                                 <span>Monthly Maint. Active</span>
                             </label>
+                            <input type="number" min="1" name="perfex_client_id" value="{{ $c->perfex_client_id }}" placeholder="Perfex ID"
+                                class="w-24 rounded-xl border border-n30 bg-primary/5 px-2.5 py-1.5 text-xs" />
                             <input type="text" name="kyc_notes" value="{{ $c->kyc_notes }}" placeholder="KYC note (CAC / ID ref)"
-                                class="flex-1 rounded-xl border border-n30 bg-primary/5 px-2.5 py-1.5 text-xs" />
+                                class="flex-1 min-w-[140px] rounded-xl border border-n30 bg-primary/5 px-2.5 py-1.5 text-xs" />
                         </div>
                         <div class="col-span-4 md:col-span-4">
                             <button type="submit" class="btn-primary w-full justify-center py-2 px-3 text-xs">Save Client</button>

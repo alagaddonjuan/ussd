@@ -42,10 +42,16 @@
 
                 <div class="flex flex-wrap gap-2 mb-3">
                     <button type="button" id="preset-lottery-btn" class="btn-outline py-1.5 px-3 text-xs">
-                        <i class="las la-magic"></i> Load Modern Lottery Example
+                        <i class="las la-magic"></i> Modern Lottery Example
                     </button>
                     <button type="button" id="preset-q4-btn" class="btn-outline py-1.5 px-3 text-xs">
-                        <i class="las la-layer-group"></i> Load Q4 Services Example
+                        <i class="las la-layer-group"></i> Q4 Services Example
+                    </button>
+                    <button type="button" id="preset-fintech-btn" class="btn-outline py-1.5 px-3 text-xs">
+                        <i class="las la-university"></i> Fintech &amp; Wallet Template
+                    </button>
+                    <button type="button" id="preset-pos-btn" class="btn-outline py-1.5 px-3 text-xs">
+                        <i class="las la-tools"></i> PoS &amp; Merchant Support
                     </button>
                     <button type="button" id="preset-current-btn" class="btn-secondary py-1.5 px-3 text-xs">
                         <i class="las la-sync"></i> Load Current Menu as Text
@@ -125,7 +131,61 @@
             </div>
 
             <div class="box border border-n30">
-                <h4 class="h4 bb-dashed pb-4 mb-4">Menu Flow Tree ({{ $items->count() }} steps)</h4>
+                <div class="bb-dashed pb-4 mb-4 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h4 class="h4">Visual Flow Canvas ({{ $items->count() }} steps)</h4>
+                        <p class="text-xs text-n100 mt-0.5">Live hierarchy preview of CON, API forwarding, and END termination branches.</p>
+                    </div>
+                    <form method="POST" action="{{ route('ussd.menus.snapshot', $menu) }}" class="flex items-center gap-2">
+                        @csrf
+                        <input type="text" name="label" placeholder="Snapshot label (optional)"
+                            class="rounded-full border border-n30 bg-primary/5 px-3 py-1.5 text-xs w-44" />
+                        <button type="submit" class="btn-outline py-1.5 px-3 text-xs">
+                            <i class="las la-save"></i> Save Snapshot
+                        </button>
+                    </form>
+                </div>
+
+                @if (count($tree) > 0)
+                    <div class="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                        @foreach ($tree as $node)
+                            @include('client.partials._flow-node', ['node' => $node, 'depth' => 0])
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-n100 py-3">Visual nodes will appear here once steps are added.</p>
+                @endif
+            </div>
+
+            <div class="box border border-n30">
+                <h4 class="h4 bb-dashed pb-4 mb-4">Version Snapshots &amp; Rollback</h4>
+                @if (isset($versions) && $versions->isNotEmpty())
+                    <div class="space-y-2.5">
+                        @foreach ($versions as $ver)
+                            <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-n30 bg-primary/5 px-4 py-2.5">
+                                <div>
+                                    <p class="text-xs font-bold text-[#0B3A75] dark:text-white">
+                                        v{{ $ver->version_number }} &bull; {{ $ver->label ?: 'Saved Snapshot' }}
+                                    </p>
+                                    <p class="text-[11px] text-n100">{{ optional($ver->created_at)->format('M d, Y H:i') }}</p>
+                                </div>
+                                <form method="POST" action="{{ route('ussd.menus.restore', [$menu, $ver]) }}"
+                                    onsubmit="return confirm('Restore menu steps back to v{{ $ver->version_number }}? Current menu will be backed up first.')">
+                                    @csrf
+                                    <button type="submit" class="btn-outline py-1 px-3 text-xs">
+                                        <i class="las la-history"></i> Restore
+                                    </button>
+                                </form>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-xs text-n100">Snapshots are automatically created before Text-to-Menu imports or whenever you click Save Snapshot.</p>
+                @endif
+            </div>
+
+            <div class="box border border-n30">
+                <h4 class="h4 bb-dashed pb-4 mb-4">Editable Menu Steps ({{ $items->count() }} steps)</h4>
                 @if (count($tree) > 0)
                     <div class="space-y-3">
                         @foreach ($tree as $node)
@@ -297,6 +357,27 @@
             '  4. Support [END: Email support@q4iltd.com or call +234 904 593 6806]'
         ].join('\n');
 
+        const fintechPreset = [
+            'Welcome to Microfinance USSD',
+            '  1. Check Account Balance [API: Enter 4-Digit PIN]',
+            '  2. Instant Funds Transfer',
+            '    1. Same Bank [API: Enter Destination Account]',
+            '    2. Other Nigerian Banks [API: Enter Destination Account]',
+            '  3. Quick Microloan [API: Loan Eligibility Check]',
+            '  4. Bill Payments',
+            '    1. Electricity Prepaid [API: Enter Meter Number]',
+            '    2. Cable TV [API: Enter Smartcard Number]',
+            '  5. Block Card / Fraud Alert [END: Please call support immediately]'
+        ].join('\n');
+
+        const posPreset = [
+            'Q4 Merchant & PoS Helpdesk',
+            '  1. Request Terminal Roll / Support [API: Enter Terminal ID (TID)]',
+            '  2. Settlement Status Check [API: Enter Merchant Reference]',
+            '  3. Dispute Failed Transaction [API: Enter RRN & Amount]',
+            '  4. Contact NOC [END: Email support@q4iltd.com or call +234 904 593 6806]'
+        ].join('\n');
+
         function updateOutlineCount() {
             if (!outlineEl || !countBadge) return;
             const lines = outlineEl.value.split(/\r?\n/).filter(l => l.trim() && !l.trim().startsWith('#'));
@@ -312,6 +393,14 @@
         });
         document.getElementById('preset-q4-btn')?.addEventListener('click', () => {
             outlineEl.value = q4ServicesPreset;
+            updateOutlineCount();
+        });
+        document.getElementById('preset-fintech-btn')?.addEventListener('click', () => {
+            outlineEl.value = fintechPreset;
+            updateOutlineCount();
+        });
+        document.getElementById('preset-pos-btn')?.addEventListener('click', () => {
+            outlineEl.value = posPreset;
             updateOutlineCount();
         });
         document.getElementById('preset-current-btn')?.addEventListener('click', () => {

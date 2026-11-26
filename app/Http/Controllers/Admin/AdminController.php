@@ -16,12 +16,16 @@ use App\Models\UssdMenu;
 use App\Models\UssdPricing;
 use App\Models\WebhookLog;
 use App\Services\MaintenanceBillingService;
+use App\Services\PerfexCrmService;
+use App\Services\UssdEngineService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminController extends Controller
@@ -104,7 +108,7 @@ class AdminController extends Controller
         ));
     }
 
-    public function clients(Request $request): View
+    public function clients(Request $request, PerfexCrmService $perfex): View
     {
         $search = trim((string) $request->query('q', ''));
 
@@ -121,8 +125,9 @@ class AdminController extends Controller
             ->paginate(20);
 
         $tiers = PricingTier::query()->orderBy('tier_name')->get();
+        $perfexConfigured = $perfex->isConfigured();
 
-        return view('admin.clients', compact('clients', 'tiers', 'search'));
+        return view('admin.clients', compact('clients', 'tiers', 'search', 'perfexConfigured'));
     }
 
     public function updateClient(Request $request, Client $client): RedirectResponse
@@ -137,6 +142,7 @@ class AdminController extends Controller
             'maintenance_enabled' => ['nullable', 'boolean'],
             'kyc_status' => ['nullable', 'in:unverified,pending,approved,rejected'],
             'kyc_notes' => ['nullable', 'string', 'max:1000'],
+            'perfex_client_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $updates = [
@@ -161,11 +167,41 @@ class AdminController extends Controller
         if (array_key_exists('kyc_notes', $data)) {
             $updates['kyc_notes'] = $data['kyc_notes'];
         }
+        if (array_key_exists('perfex_client_id', $data)) {
+            $updates['perfex_client_id'] = $data['perfex_client_id'] ?: null;
+        }
 
         $client->update($updates);
         $this->recordAudit($request, 'client.updated', "Updated {$client->name} (status={$updates['status']}, code=".($updates['ussd_code'] ?? 'none').')', $client->id);
 
         return back()->with('status', "Updated configuration for {$client->name}.");
+    }
+
+    public function downloadKyc(Client $client): BinaryFileResponse|RedirectResponse
+    {
+        if (! $client->kyc_document_path || ! Storage::disk('local')->exists($client->kyc_document_path)) {
+            return back()->withErrors(['kyc' => "No KYC document file found for {$client->name}."]);
+        }
+
+        return response()->download(Storage::disk('local')->path($client->kyc_document_path));
+    }
+
+    public function pushPerfexInvoice(Request $request, Client $client, PerfexCrmService $perfex): RedirectResponse
+    {
+        $fee = round((float) ($client->monthly_maintenance_fee ?? 159500), 2);
+        $result = $perfex->pushInvoice(
+            $client,
+            $fee,
+            'Monthly USSD Channel Maintenance ('.now()->format('M Y').')'
+        );
+
+        $this->recordAudit($request, 'perfex.invoice_sync', "{$client->name}: {$result['message']}", $client->id);
+
+        if (! $result['ok']) {
+            return back()->withErrors(['perfex' => $result['message']]);
+        }
+
+        return back()->with('status', $result['message']);
     }
 
     public function chargeMaintenance(Request $request, MaintenanceBillingService $billing): RedirectResponse
@@ -331,6 +367,42 @@ class AdminController extends Controller
         $auditLogs = AdminAuditLog::query()->with(['actor', 'targetClient'])->orderByDesc('id')->limit(50)->get();
 
         return view('admin.logs', compact('tab', 'ussdLogs', 'smsLogs', 'airtimeLogs', 'transactions', 'webhookLogs', 'auditLogs'));
+    }
+
+    public function replayWebhook(Request $request, WebhookLog $webhookLog, UssdEngineService $engine): RedirectResponse
+    {
+        $payload = json_decode((string) $webhookLog->payload, true);
+        if (! is_array($payload)) {
+            return back()->withErrors(['webhook' => 'Stored webhook payload is not valid JSON for replay.']);
+        }
+
+        if ($webhookLog->provider !== 'ussd_gateway') {
+            return back()->withErrors(['webhook' => 'Only internal USSD gateway events can be replayed safely without gateway re-signing.']);
+        }
+
+        $start = microtime(true);
+        $outcome = 'replayed';
+        if (str_contains((string) $webhookLog->endpoint, 'events')) {
+            $engine->reconcileEventCost($payload);
+            $outcome = 'replayed:reconciled';
+        } else {
+            $reply = $engine->handleCallback($payload, true);
+            $outcome = str_starts_with($reply, 'END Error:') ? 'replayed:rejected' : 'replayed:ok';
+        }
+
+        WebhookLog::create([
+            'provider' => $webhookLog->provider,
+            'endpoint' => $webhookLog->endpoint,
+            'status_code' => 200,
+            'latency_ms' => (int) round((microtime(true) - $start) * 1000),
+            'outcome' => $outcome,
+            'payload' => $webhookLog->payload,
+            'created_at' => now(),
+        ]);
+
+        $this->recordAudit($request, 'webhook.replayed', "Replayed webhook #{$webhookLog->id} ({$webhookLog->endpoint}) -> {$outcome}");
+
+        return back()->with('status', "Replayed webhook #{$webhookLog->id} ({$outcome}).");
     }
 
     public function exportCsv(Request $request, string $type): StreamedResponse

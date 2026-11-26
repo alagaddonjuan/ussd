@@ -37,6 +37,10 @@ class Client extends Authenticatable
         'last_maintenance_billed_at',
         'kyc_status',
         'kyc_notes',
+        'kyc_document_path',
+        'kyc_submitted_at',
+        'perfex_client_id',
+        'maintenance_reminded_at',
         'password_reset_token',
         'password_reset_expires',
     ];
@@ -53,12 +57,15 @@ class Client extends Authenticatable
             'is_2fa_enabled' => 'boolean',
             'is_admin' => 'boolean',
             'maintenance_enabled' => 'boolean',
+            'perfex_client_id' => 'integer',
             'token_balance' => 'float',
             'low_balance_threshold' => 'float',
             'monthly_maintenance_fee' => 'float',
             'created_at' => 'datetime',
+            'kyc_submitted_at' => 'datetime',
             'low_balance_notified_at' => 'datetime',
             'last_maintenance_billed_at' => 'datetime',
+            'maintenance_reminded_at' => 'datetime',
             'password_reset_expires' => 'datetime',
         ];
     }

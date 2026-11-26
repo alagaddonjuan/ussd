@@ -20,6 +20,7 @@ class Transaction extends Model
         'status',
         'gateway',
         'notes',
+        'perfex_invoice_id',
     ];
 
     protected function casts(): array

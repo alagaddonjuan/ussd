@@ -80,7 +80,7 @@
                 </table>
             @elseif ($tab === 'webhooks')
                 <table class="w-full whitespace-nowrap text-sm">
-                    <thead><tr class="bg-secondary/5"><th class="px-4 py-3 text-start">Provider</th><th class="px-4 py-3 text-start">Endpoint</th><th class="px-4 py-3 text-start">Status</th><th class="px-4 py-3 text-start">Latency</th><th class="px-4 py-3 text-start">Outcome</th><th class="px-4 py-3 text-start">Time</th></tr></thead>
+                    <thead><tr class="bg-secondary/5"><th class="px-4 py-3 text-start">Provider</th><th class="px-4 py-3 text-start">Endpoint</th><th class="px-4 py-3 text-start">Status</th><th class="px-4 py-3 text-start">Latency</th><th class="px-4 py-3 text-start">Outcome</th><th class="px-4 py-3 text-start">Time</th><th class="px-4 py-3 text-start">Action</th></tr></thead>
                     <tbody>
                         @forelse ($webhookLogs as $wh)
                             <tr class="even:bg-secondary/5">
@@ -90,9 +90,21 @@
                                 <td class="px-4 py-2.5 text-xs">{{ $wh->latency_ms ? $wh->latency_ms . ' ms' : '—' }}</td>
                                 <td class="px-4 py-2.5 text-xs">{{ $wh->outcome }}</td>
                                 <td class="px-4 py-2.5 text-xs text-n100">{{ optional($wh->created_at)->format('Y-m-d H:i') }}</td>
+                                <td class="px-4 py-2.5">
+                                    @if ($wh->provider === 'ussd_gateway')
+                                        <form method="POST" action="{{ route('admin.webhooks.replay', $wh) }}">
+                                            @csrf
+                                            <button type="submit" class="btn-outline py-1 px-2.5 text-[11px]">
+                                                <i class="las la-redo-alt"></i> Replay
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="text-xs text-n100">—</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="px-4 py-6 text-center text-n100">No webhook deliveries logged yet.</td></tr>
+                            <tr><td colspan="7" class="px-4 py-6 text-center text-n100">No webhook deliveries logged yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

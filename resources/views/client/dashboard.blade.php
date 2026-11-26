@@ -129,6 +129,49 @@
             </div>
         </div>
 
+        <!-- Session Telemetry & Drop-Off Funnel -->
+        <div class="box col-span-12 bg-n0 border border-n30">
+            <div class="bb-dashed mb-4 flex flex-wrap items-center justify-between gap-3 pb-4">
+                <div>
+                    <h4 class="h4">USSD Session Telemetry &amp; Carrier Mix</h4>
+                    <p class="text-xs text-n100 mt-0.5">Completion health, average duration, hop depth, and Nigerian telco distribution</p>
+                </div>
+                <span class="rounded-full bg-[#10B981]/15 px-3 py-1 text-xs font-bold text-[#10B981]">
+                    {{ $completionRate }}% Completion Rate
+                </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="rounded-2xl border border-n30 bg-primary/5 p-4">
+                    <p class="text-xs text-n100">Completed vs Incomplete</p>
+                    <p class="text-xl font-bold text-[#0B3A75] dark:text-white mt-1">
+                        {{ number_format($completedSessions) }} <span class="text-xs font-normal text-error">/ {{ number_format($incompleteSessions) }} dropped</span>
+                    </p>
+                </div>
+                <div class="rounded-2xl border border-n30 bg-primary/5 p-4">
+                    <p class="text-xs text-n100">Avg. Session Duration</p>
+                    <p class="text-xl font-bold text-[#0878F8] mt-1">{{ $avgDurationSec }}s</p>
+                </div>
+                <div class="rounded-2xl border border-n30 bg-primary/5 p-4">
+                    <p class="text-xs text-n100">Avg. Menu Depth</p>
+                    <p class="text-xl font-bold text-[#6D5EF7] mt-1">{{ $avgHops }} hops</p>
+                </div>
+                <div class="rounded-2xl border border-n30 bg-primary/5 p-4">
+                    <p class="text-xs text-n100 mb-1.5">Carrier Breakdown</p>
+                    @if (! empty($carrierBreakdown))
+                        <div class="flex flex-wrap gap-1.5">
+                            @foreach ($carrierBreakdown as $carrier => $hits)
+                                <span class="rounded-full bg-white/80 dark:bg-white/10 border border-n30 px-2.5 py-0.5 text-[11px] font-semibold">
+                                    {{ $carrier }}: {{ $hits }}
+                                </span>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-xs text-n100">Awaiting carrier traffic</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+
         <!-- Recent USSD Sessions -->
         <div class="box col-span-12 lg:col-span-6 bg-n0 border border-n30">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-4">
