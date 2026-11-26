@@ -72,6 +72,13 @@ class PortalViewsTest extends TestCase
             ->assertSee('linkedin.com/company/q4i-limited', false)
             ->assertSee('threads.com/@q4international', false)
             ->assertSee('tiktok.com/@q4international', false)
+            ->assertSeeInOrder([
+                'Built for Enterprise USSD, SMS',
+                'Choose the Right Plan for Your USSD Volume',
+                'Frequently Asked Questions',
+                'More Solutions From Q4 International',
+                'Trusted By Leading Enterprises &amp; Partners',
+            ], false)
             ->assertDontSee("Africa's Talking")
             ->assertDontSee('Africa&apos;s Talking', false)
             ->assertDontSee('*347*102#')

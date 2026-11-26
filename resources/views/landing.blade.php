@@ -192,42 +192,6 @@
         </div>
     </section>
 
-    <!-- Trusted By Partners Marquee (From q4iltd.com, white-labeled cleanly) -->
-    <section id="partners" class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div class="glass-card rounded-3xl px-6 py-6 overflow-hidden">
-            <p class="text-center text-xs font-bold uppercase tracking-[0.2em] text-[#0B3A75] dark:text-[#22C7F8] mb-5">
-                Trusted By Leading Enterprises &amp; Partners
-            </p>
-            @php
-                $partners = [
-                    ['file' => 'modern-lottery.jpg', 'name' => 'Modern Lottery'],
-                    ['file' => 'kozen.jpg', 'name' => 'Kozen'],
-                    ['file' => 'netplusdotcom.png', 'name' => 'NetPlusDotCom'],
-                    ['file' => 'omni.png', 'name' => 'Omni'],
-                    ['file' => 'urovo.jpg', 'name' => 'Urovo'],
-                    ['file' => 'rexpay.png', 'name' => 'Rexpay'],
-                    ['file' => 'zenith.png', 'name' => 'Zenith'],
-                    ['file' => 'loolas-pod.png', 'name' => 'Loolas POD'],
-                    ['file' => 'western-lotto.jpg', 'name' => 'Western Lotto'],
-                    ['file' => 'hoco.png', 'name' => 'Ho+Co'],
-                    ['file' => 'igi.jpg', 'name' => 'IGI'],
-                ];
-            @endphp
-            <div class="relative overflow-hidden">
-                <div class="q4-partners-track items-center gap-10">
-                    @for ($loopCopy = 0; $loopCopy < 2; $loopCopy++)
-                        @foreach ($partners as $partner)
-                            <div class="flex h-12 w-32 shrink-0 items-center justify-center rounded-xl bg-white/95 px-3 py-1.5 shadow-xs border border-[#D1D5DB]/60">
-                                <img src="{{ asset('assets/partners/' . $partner['file']) }}" alt="{{ $partner['name'] }}"
-                                    class="max-h-9 max-w-full object-contain" loading="lazy" />
-                            </div>
-                        @endforeach
-                    @endfor
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- Core Communications Capabilities -->
     <section id="services" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div class="text-center max-w-2xl mx-auto mb-12">
@@ -302,129 +266,6 @@
                     Enterprise accounts protected by Authenticator App 2FA verification, TLS encryption, and immutable security controls.
                 </p>
             </div>
-        </div>
-    </section>
-
-    <!-- Full Q4 International Ecosystem Services (From q4iltd.com & lotto.q4iltd.com) -->
-    <section id="ecosystem" class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div class="text-center max-w-3xl mx-auto mb-12">
-            <span class="glass-pill inline-block rounded-full px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#6D5EF7] dark:text-purple-300 mb-3">
-                Complete Q4I Product Ecosystem
-            </span>
-            <h2 class="text-3xl sm:text-4xl font-extrabold text-[#0B3A75] dark:text-white">
-                More Solutions From Q4 International
-            </h2>
-            <p class="mt-3 text-slate-600 dark:text-slate-300">
-                Beyond USSD &amp; Messaging, Q4I powers digital payments, social betting infrastructure, PoS fleets, CRM automation, and cloud hosting.
-            </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            <!-- Featured: Social Betting & Financial Engine (lotto.q4iltd.com) -->
-            <a href="https://lotto.q4iltd.com" target="_blank" rel="noopener noreferrer"
-                class="glass-card rounded-3xl p-6 md:col-span-2 border-l-4 border-[#6D5EF7] flex flex-col justify-between transition-all hover:-translate-y-1">
-                <div>
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="inline-flex items-center gap-2 rounded-full bg-[#6D5EF7]/15 px-3 py-1 text-xs font-bold text-[#6D5EF7] dark:text-purple-300">
-                            <i class="las la-dice text-base"></i> Social Betting &amp; Gaming Engine
-                        </span>
-                        <span class="text-xs font-semibold text-[#0878F8] dark:text-[#22C7F8]">lotto.q4iltd.com &rarr;</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-[#0B3A75] dark:text-white mb-2">
-                        Q4I Financial Engine &amp; Social Betting Clearinghouse
-                    </h3>
-                    <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Real-time 35% / 65% escrow split settlement, HMAC-SHA256 cryptographic ledger, dual-officer Maker-Checker draw governance, and integrated USSD/social gaming channels for licensed operators.
-                    </p>
-                </div>
-                <span class="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#6D5EF7] dark:text-purple-300">
-                    Explore Social Betting Clearinghouse <i class="las la-external-link-alt"></i>
-                </span>
-            </a>
-
-            <a href="https://q4iltd.com" target="_blank" rel="noopener noreferrer"
-                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
-                <div>
-                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#0878F8]/12 text-[#0878F8]">
-                        <i class="las la-laptop-code text-2xl"></i>
-                    </div>
-                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">Innovative Software</h4>
-                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Custom full-stack web platforms, core enterprise backends, and conversational API integrations.
-                    </p>
-                </div>
-                <span class="mt-4 text-xs font-semibold text-[#0878F8]">q4iltd.com &rarr;</span>
-            </a>
-
-            <a href="https://host.q4iltd.com/" target="_blank" rel="noopener noreferrer"
-                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
-                <div>
-                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#22C7F8]/15 text-[#0878F8]">
-                        <i class="las la-server text-2xl"></i>
-                    </div>
-                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">Secure Hosting</h4>
-                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Managed cloud hosting, WHMCS reseller infrastructure, and domain management built for high uptime.
-                    </p>
-                </div>
-                <span class="mt-4 text-xs font-semibold text-[#0878F8]">host.q4iltd.com &rarr;</span>
-            </a>
-
-            <a href="https://q4iltd.com" target="_blank" rel="noopener noreferrer"
-                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
-                <div>
-                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#0B3A75]/12 text-[#0B3A75] dark:text-[#22C7F8]">
-                        <i class="las la-credit-card text-2xl"></i>
-                    </div>
-                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">PoS &amp; Hardware</h4>
-                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Diagnostic workflows, hardware provisioning, and maintenance across Kozen &amp; Urovo PoS terminal fleets.
-                    </p>
-                </div>
-                <span class="mt-4 text-xs font-semibold text-[#0878F8]">Enterprise Hardware &rarr;</span>
-            </a>
-
-            <a href="https://crm.q4iltd.com/authentication/login" target="_blank" rel="noopener noreferrer"
-                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
-                <div>
-                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#6D5EF7]/15 text-[#6D5EF7]">
-                        <i class="las la-robot text-2xl"></i>
-                    </div>
-                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">Custom CRM Automation</h4>
-                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Automated customer workflows, live support ticketing, and sales pipeline orchestration tailored to your team.
-                    </p>
-                </div>
-                <span class="mt-4 text-xs font-semibold text-[#0878F8]">crm.q4iltd.com &rarr;</span>
-            </a>
-
-            <a href="https://pay.q4iltd.com/merchant/login" target="_blank" rel="noopener noreferrer"
-                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
-                <div>
-                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#10B981]/15 text-[#10B981]">
-                        <i class="las la-money-check-alt text-2xl"></i>
-                    </div>
-                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">Digital Payments</h4>
-                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        High-reliability payment routing, settlement gateways, and financial compliance solutions for merchants.
-                    </p>
-                </div>
-                <span class="mt-4 text-xs font-semibold text-[#0878F8]">pay.q4iltd.com &rarr;</span>
-            </a>
-
-            <a href="https://pay.q4iltd.com/vendor/login" target="_blank" rel="noopener noreferrer"
-                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
-                <div>
-                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#F59E0B]/15 text-[#F59E0B]">
-                        <i class="las la-store text-2xl"></i>
-                    </div>
-                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">Social Commerce &amp; Tools</h4>
-                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Digital vendor storefronts with integrated checkouts plus free Chrome browser productivity extensions.
-                    </p>
-                </div>
-                <span class="mt-4 text-xs font-semibold text-[#0878F8]">Vendor Portal &rarr;</span>
-            </a>
         </div>
     </section>
 
@@ -723,6 +564,165 @@
                     </div>
                 </div>
             @endforeach
+        </div>
+    </section>
+
+    <!-- More Solutions From Q4 International (Below FAQ, on top of Partners) -->
+    <section id="ecosystem" class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-12">
+            <span class="glass-pill inline-block rounded-full px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#6D5EF7] dark:text-purple-300 mb-3">
+                Complete Q4I Product Ecosystem
+            </span>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-[#0B3A75] dark:text-white">
+                More Solutions From Q4 International
+            </h2>
+            <p class="mt-3 text-slate-600 dark:text-slate-300">
+                Beyond USSD &amp; Messaging, Q4I powers digital payments, social betting infrastructure, PoS fleets, CRM automation, and cloud hosting.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            <!-- Featured: Social Betting & Financial Engine (lotto.q4iltd.com) -->
+            <a href="https://lotto.q4iltd.com" target="_blank" rel="noopener noreferrer"
+                class="glass-card rounded-3xl p-6 md:col-span-2 border-l-4 border-[#6D5EF7] flex flex-col justify-between transition-all hover:-translate-y-1">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex items-center gap-2 rounded-full bg-[#6D5EF7]/15 px-3 py-1 text-xs font-bold text-[#6D5EF7] dark:text-purple-300">
+                            <i class="las la-dice text-base"></i> Social Betting &amp; Gaming Engine
+                        </span>
+                        <span class="text-xs font-semibold text-[#0878F8] dark:text-[#22C7F8]">lotto.q4iltd.com &rarr;</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-[#0B3A75] dark:text-white mb-2">
+                        Q4I Financial Engine &amp; Social Betting Clearinghouse
+                    </h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Real-time 35% / 65% escrow split settlement, HMAC-SHA256 cryptographic ledger, dual-officer Maker-Checker draw governance, and integrated USSD/social gaming channels for licensed operators.
+                    </p>
+                </div>
+                <span class="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#6D5EF7] dark:text-purple-300">
+                    Explore Social Betting Clearinghouse <i class="las la-external-link-alt"></i>
+                </span>
+            </a>
+
+            <a href="https://q4iltd.com" target="_blank" rel="noopener noreferrer"
+                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
+                <div>
+                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#0878F8]/12 text-[#0878F8]">
+                        <i class="las la-laptop-code text-2xl"></i>
+                    </div>
+                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">Innovative Software</h4>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Custom full-stack web platforms, core enterprise backends, and conversational API integrations.
+                    </p>
+                </div>
+                <span class="mt-4 text-xs font-semibold text-[#0878F8]">q4iltd.com &rarr;</span>
+            </a>
+
+            <a href="https://host.q4iltd.com/" target="_blank" rel="noopener noreferrer"
+                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
+                <div>
+                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#22C7F8]/15 text-[#0878F8]">
+                        <i class="las la-server text-2xl"></i>
+                    </div>
+                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">Secure Hosting</h4>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Managed cloud hosting, WHMCS reseller infrastructure, and domain management built for high uptime.
+                    </p>
+                </div>
+                <span class="mt-4 text-xs font-semibold text-[#0878F8]">host.q4iltd.com &rarr;</span>
+            </a>
+
+            <a href="https://q4iltd.com" target="_blank" rel="noopener noreferrer"
+                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
+                <div>
+                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#0B3A75]/12 text-[#0B3A75] dark:text-[#22C7F8]">
+                        <i class="las la-credit-card text-2xl"></i>
+                    </div>
+                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">PoS &amp; Hardware</h4>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Diagnostic workflows, hardware provisioning, and maintenance across Kozen &amp; Urovo PoS terminal fleets.
+                    </p>
+                </div>
+                <span class="mt-4 text-xs font-semibold text-[#0878F8]">Enterprise Hardware &rarr;</span>
+            </a>
+
+            <a href="https://crm.q4iltd.com/authentication/login" target="_blank" rel="noopener noreferrer"
+                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
+                <div>
+                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#6D5EF7]/15 text-[#6D5EF7]">
+                        <i class="las la-robot text-2xl"></i>
+                    </div>
+                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">Custom CRM Automation</h4>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Automated customer workflows, live support ticketing, and sales pipeline orchestration tailored to your team.
+                    </p>
+                </div>
+                <span class="mt-4 text-xs font-semibold text-[#0878F8]">crm.q4iltd.com &rarr;</span>
+            </a>
+
+            <a href="https://pay.q4iltd.com/merchant/login" target="_blank" rel="noopener noreferrer"
+                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
+                <div>
+                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#10B981]/15 text-[#10B981]">
+                        <i class="las la-money-check-alt text-2xl"></i>
+                    </div>
+                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">Digital Payments</h4>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        High-reliability payment routing, settlement gateways, and financial compliance solutions for merchants.
+                    </p>
+                </div>
+                <span class="mt-4 text-xs font-semibold text-[#0878F8]">pay.q4iltd.com &rarr;</span>
+            </a>
+
+            <a href="https://pay.q4iltd.com/vendor/login" target="_blank" rel="noopener noreferrer"
+                class="glass-card rounded-3xl p-6 flex flex-col justify-between transition-all hover:-translate-y-1">
+                <div>
+                    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#F59E0B]/15 text-[#F59E0B]">
+                        <i class="las la-store text-2xl"></i>
+                    </div>
+                    <h4 class="text-lg font-bold text-[#0B3A75] dark:text-white mb-1.5">Social Commerce &amp; Tools</h4>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Digital vendor storefronts with integrated checkouts plus free Chrome browser productivity extensions.
+                    </p>
+                </div>
+                <span class="mt-4 text-xs font-semibold text-[#0878F8]">Vendor Portal &rarr;</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- Trusted By Partners Marquee (Directly above Footer) -->
+    <section id="partners" class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div class="glass-card rounded-3xl px-6 py-6 overflow-hidden">
+            <p class="text-center text-xs font-bold uppercase tracking-[0.2em] text-[#0B3A75] dark:text-[#22C7F8] mb-5">
+                Trusted By Leading Enterprises &amp; Partners
+            </p>
+            @php
+                $partners = [
+                    ['file' => 'modern-lottery.jpg', 'name' => 'Modern Lottery'],
+                    ['file' => 'kozen.jpg', 'name' => 'Kozen'],
+                    ['file' => 'netplusdotcom.png', 'name' => 'NetPlusDotCom'],
+                    ['file' => 'omni.png', 'name' => 'Omni'],
+                    ['file' => 'urovo.jpg', 'name' => 'Urovo'],
+                    ['file' => 'rexpay.png', 'name' => 'Rexpay'],
+                    ['file' => 'zenith.png', 'name' => 'Zenith'],
+                    ['file' => 'loolas-pod.png', 'name' => 'Loolas POD'],
+                    ['file' => 'western-lotto.jpg', 'name' => 'Western Lotto'],
+                    ['file' => 'hoco.png', 'name' => 'Ho+Co'],
+                    ['file' => 'igi.jpg', 'name' => 'IGI'],
+                ];
+            @endphp
+            <div class="relative overflow-hidden">
+                <div class="q4-partners-track items-center gap-10">
+                    @for ($loopCopy = 0; $loopCopy < 2; $loopCopy++)
+                        @foreach ($partners as $partner)
+                            <div class="flex h-12 w-32 shrink-0 items-center justify-center rounded-xl bg-white/95 px-3 py-1.5 shadow-xs border border-[#D1D5DB]/60">
+                                <img src="{{ asset('assets/partners/' . $partner['file']) }}" alt="{{ $partner['name'] }}"
+                                    class="max-h-9 max-w-full object-contain" loading="lazy" />
+                            </div>
+                        @endforeach
+                    @endfor
+                </div>
+            </div>
         </div>
     </section>
 
