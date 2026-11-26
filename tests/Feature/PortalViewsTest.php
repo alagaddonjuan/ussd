@@ -72,6 +72,7 @@ class PortalViewsTest extends TestCase
             ->assertSee('linkedin.com/company/q4i-limited', false)
             ->assertSee('threads.com/@q4international', false)
             ->assertSee('tiktok.com/@q4international', false)
+            ->assertSee('q4-antigravity-canvas', false)
             ->assertSeeInOrder([
                 'Built for Enterprise USSD, SMS',
                 'Choose the Right Plan for Your USSD Volume',
@@ -85,7 +86,7 @@ class PortalViewsTest extends TestCase
             ->assertDontSee('Multiplier');
 
         // Guest routes
-        $this->get('/login')->assertOk();
+        $this->get('/login')->assertOk()->assertSee('q4-antigravity-canvas', false);
         $this->get('/register')->assertOk();
         $this->get('/forgot-password')->assertOk();
         $this->get('/reset-password/testtoken')->assertOk();

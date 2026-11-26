@@ -824,6 +824,7 @@
             });
         });
     </script>
+    @include('partials._antigravity-fx', ['tilt' => true])
 </body>
 
 </html>
