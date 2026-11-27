@@ -38,6 +38,24 @@ class UssdMenuController extends Controller
         return view('client.ussd-menus', compact('client', 'menus', 'ussdLogs'));
     }
 
+    public function liveLogs(Request $request): JsonResponse
+    {
+        $client = $request->user();
+        $ussdLogs = UssdLog::query()
+            ->where('client_id', $client->id)
+            ->orderByDesc('id')
+            ->limit(25)
+            ->get();
+
+        $html = view('client.partials._ussd-logs-rows', compact('ussdLogs'))->render();
+
+        return response()->json([
+            'html' => $html,
+            'count' => $ussdLogs->count(),
+            'updated_at' => now()->format('H:i:s'),
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([

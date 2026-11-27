@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\SmsLog;
 use App\Models\Transaction;
 use App\Models\UssdLog;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -14,13 +16,40 @@ class DashboardController extends Controller
 {
     public function index(Request $request): View
     {
-        $client = $request->user();
+        $data = $this->buildDashboardData($request->user());
 
+        return view('client.dashboard', $data);
+    }
+
+    public function live(Request $request): JsonResponse
+    {
+        $data = $this->buildDashboardData($request->user());
+        $recentUssdHtml = view('client.partials._dashboard-ussd-rows', [
+            'recentUssdLogs' => $data['recentUssdLogs'],
+        ])->render();
+
+        return response()->json([
+            'token_balance' => '₦'.number_format((float) $data['client']->token_balance, 2),
+            'total_ussd' => number_format($data['totalUssd']),
+            'completion_rate' => $data['completionRate'].'%',
+            'completed_sessions' => number_format($data['completedSessions']),
+            'incomplete_sessions' => number_format($data['incompleteSessions']),
+            'avg_duration_sec' => $data['avgDurationSec'].'s',
+            'avg_hops' => $data['avgHops'].' hops',
+            'recent_ussd_html' => $recentUssdHtml,
+            'updated_at' => now()->format('H:i:s'),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildDashboardData(Client $client): array
+    {
         $totalSms = SmsLog::query()->where('client_id', $client->id)->count();
         $totalUssd = UssdLog::query()->where('client_id', $client->id)->count();
         $totalAirtime = $client->airtimeLogs()->count();
         $smsRate = $client->getServicePrice('SMS', 3.50);
-        $ussdMultiplier = $client->getUssdCostMultiplier();
         $telcoRates = $client->getTelcoUssdRates();
         $ussdRate = $client->getServicePrice('USSD', $telcoRates['mtn']['rate']);
 
@@ -68,7 +97,11 @@ class DashboardController extends Controller
             ->where('client_id', $client->id)
             ->get(['status', 'duration_ms', 'hops', 'network_name']);
 
-        $completedSessions = $allClientUssd->filter(fn ($row) => stripos((string) $row->status, 'incomplete') === false)->count();
+        $completedSessions = $allClientUssd->filter(function ($row) {
+            $st = strtolower((string) $row->status);
+
+            return ! str_contains($st, 'incomplete') && ! str_contains($st, 'fail') && ! str_contains($st, 'reject');
+        })->count();
         $incompleteSessions = max(0, $allClientUssd->count() - $completedSessions);
         $completionRate = $allClientUssd->isNotEmpty()
             ? round(($completedSessions / $allClientUssd->count()) * 100, 1)
@@ -85,7 +118,7 @@ class DashboardController extends Controller
             ->sortDesc()
             ->all();
 
-        return view('client.dashboard', compact(
+        return compact(
             'client',
             'totalSms',
             'totalUssd',
@@ -104,6 +137,6 @@ class DashboardController extends Controller
             'avgDurationSec',
             'avgHops',
             'carrierBreakdown'
-        ));
+        );
     }
 }

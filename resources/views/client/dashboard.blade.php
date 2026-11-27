@@ -8,7 +8,21 @@
             <h2 class="h2">Welcome, {{ $client->name }}</h2>
             <p class="text-sm text-n100 mt-1">Assigned USSD Code: <span class="font-semibold text-primary">{{ $client->ussd_code ?: 'Unassigned' }}</span></p>
         </div>
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2 rounded-3xl border border-n30 bg-n0 px-3 py-1.5">
+                <span class="text-xs text-n100" id="dash-live-updated">Live {{ now()->format('H:i:s') }}</span>
+                <select id="dash-auto-refresh" aria-label="Dashboard auto refresh"
+                    class="rounded-2xl border border-n30 bg-primary/5 px-2 py-1 text-xs font-medium">
+                    <option value="0">Auto: Off</option>
+                    <option value="5000">Auto: 5s</option>
+                    <option value="10000" selected>Auto: 10s</option>
+                    <option value="30000">Auto: 30s</option>
+                </select>
+                <button type="button" id="dash-refresh-btn" class="btn-outline py-1 px-2.5 text-xs">
+                    <i class="las la-sync" id="dash-refresh-icon"></i>
+                    <span>Refresh</span>
+                </button>
+            </div>
             <a href="{{ route('ussd.menus.index') }}" class="btn-outline">
                 <i class="las la-sitemap"></i>
                 <span>Menu Builder</span>
@@ -27,7 +41,7 @@
                 <span class="font-medium text-n200">Token Balance</span>
                 <span class="flex size-9 items-center justify-center rounded-full bg-[#0878F8]/12 text-[#0878F8]"><i class="las la-wallet"></i></span>
             </div>
-            <h4 class="h4 mb-2">₦{{ number_format((float) $client->token_balance, 2) }}</h4>
+            <h4 class="h4 mb-2" id="dash-token-balance">₦{{ number_format((float) $client->token_balance, 2) }}</h4>
             <span class="text-xs font-semibold {{ $client->status === 'active' ? 'text-[#10B981]' : 'text-error' }}">
                 Status: {{ ucfirst($client->status) }} &bull; Alert @ ₦{{ number_format((float) ($client->low_balance_threshold ?? 5000), 0) }}
             </span>
@@ -35,10 +49,10 @@
 
         <div class="box col-span-12 bg-n0 min-[650px]:col-span-6 3xl:col-span-3 border border-n30 border-t-2 border-t-[#0B3A75]">
             <div class="bb-dashed mb-4 flex items-center justify-between pb-3">
-                <span class="font-medium text-n200">Total USSD Hits</span>
+                <span class="font-medium text-n200">Total USSD Sessions</span>
                 <span class="flex size-9 items-center justify-center rounded-full bg-[#0B3A75]/12 text-[#0B3A75] dark:text-[#22C7F8]"><i class="las la-phone-volume"></i></span>
             </div>
-            <h4 class="h4 mb-2">{{ number_format($totalUssd) }}</h4>
+            <h4 class="h4 mb-2" id="dash-total-ussd">{{ number_format($totalUssd) }}</h4>
             <span class="text-xs text-n100">
                 {{ $client->pricingTier?->tier_name ?? 'Basic Plan' }} &bull;
                 MTN ₦{{ number_format($telcoRates['mtn']['rate'], 2) }}/20s &bull;
@@ -137,23 +151,24 @@
                     <p class="text-xs text-n100 mt-0.5">Completion health, average duration, hop depth, and Nigerian telco distribution</p>
                 </div>
                 <span class="rounded-full bg-[#10B981]/15 px-3 py-1 text-xs font-bold text-[#10B981]">
-                    {{ $completionRate }}% Completion Rate
+                    <span id="dash-completion-rate">{{ $completionRate }}%</span> Completion Rate
                 </span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="rounded-2xl border border-n30 bg-primary/5 p-4">
                     <p class="text-xs text-n100">Completed vs Incomplete</p>
                     <p class="text-xl font-bold text-[#0B3A75] dark:text-white mt-1">
-                        {{ number_format($completedSessions) }} <span class="text-xs font-normal text-error">/ {{ number_format($incompleteSessions) }} dropped</span>
+                        <span id="dash-completed-sessions">{{ number_format($completedSessions) }}</span>
+                        <span class="text-xs font-normal text-error">/ <span id="dash-incomplete-sessions">{{ number_format($incompleteSessions) }}</span> dropped</span>
                     </p>
                 </div>
                 <div class="rounded-2xl border border-n30 bg-primary/5 p-4">
                     <p class="text-xs text-n100">Avg. Session Duration</p>
-                    <p class="text-xl font-bold text-[#0878F8] mt-1">{{ $avgDurationSec }}s</p>
+                    <p class="text-xl font-bold text-[#0878F8] mt-1" id="dash-avg-duration">{{ $avgDurationSec }}s</p>
                 </div>
                 <div class="rounded-2xl border border-n30 bg-primary/5 p-4">
                     <p class="text-xs text-n100">Avg. Menu Depth</p>
-                    <p class="text-xl font-bold text-[#6D5EF7] mt-1">{{ $avgHops }} hops</p>
+                    <p class="text-xl font-bold text-[#6D5EF7] mt-1" id="dash-avg-hops">{{ $avgHops }} hops</p>
                 </div>
                 <div class="rounded-2xl border border-n30 bg-primary/5 p-4">
                     <p class="text-xs text-n100 mb-1.5">Carrier Breakdown</p>
@@ -188,19 +203,8 @@
                             <th class="px-4 py-3 text-start">Time</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse ($recentUssdLogs as $log)
-                            <tr class="even:bg-secondary/5">
-                                <td class="px-4 py-2.5 font-medium">{{ $log->phone_number }}</td>
-                                <td class="px-4 py-2.5">{{ \Illuminate\Support\Str::limit($log->session_data ?: 'Main Menu', 28) }}</td>
-                                <td class="px-4 py-2.5">₦{{ number_format((float) $log->cost, 2) }}</td>
-                                <td class="px-4 py-2.5 text-xs text-n100">{{ optional($log->created_at)->format('M d, H:i') }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="px-4 py-6 text-center text-n100">No USSD sessions logged yet.</td>
-                            </tr>
-                        @endforelse
+                    <tbody id="dash-recent-ussd-tbody">
+                        @include('client.partials._dashboard-ussd-rows')
                     </tbody>
                 </table>
             </div>
@@ -247,3 +251,79 @@
     </div>
 </div>
 @endsection
+
+@push('page-js')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const refreshBtn = document.getElementById('dash-refresh-btn');
+    const refreshIcon = document.getElementById('dash-refresh-icon');
+    const intervalSelect = document.getElementById('dash-auto-refresh');
+    const updatedLabel = document.getElementById('dash-live-updated');
+    const tbody = document.getElementById('dash-recent-ussd-tbody');
+    const storageKey = 'q4_client_dash_refresh_ms';
+    let timerId = null;
+    let busy = false;
+
+    async function refreshDashboard() {
+        if (busy || !tbody) return;
+        busy = true;
+        refreshIcon && refreshIcon.classList.add('animate-spin');
+        try {
+            const res = await fetch(@json(route('dashboard.live')), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            tbody.innerHTML = data.recent_ussd_html;
+
+            const fields = {
+                'dash-token-balance': data.token_balance,
+                'dash-total-ussd': data.total_ussd,
+                'dash-completion-rate': data.completion_rate,
+                'dash-completed-sessions': data.completed_sessions,
+                'dash-incomplete-sessions': data.incomplete_sessions,
+                'dash-avg-duration': data.avg_duration_sec,
+                'dash-avg-hops': data.avg_hops,
+            };
+            Object.entries(fields).forEach(([id, val]) => {
+                const el = document.getElementById(id);
+                if (el && val !== undefined) el.textContent = val;
+            });
+
+            if (updatedLabel && data.updated_at) updatedLabel.textContent = 'Live ' + data.updated_at;
+        } catch (e) {
+            if (updatedLabel) updatedLabel.textContent = 'Sync retry pending';
+        } finally {
+            busy = false;
+            refreshIcon && refreshIcon.classList.remove('animate-spin');
+        }
+    }
+
+    function schedule() {
+        if (timerId) clearInterval(timerId);
+        const ms = parseInt(intervalSelect?.value || '0', 10);
+        if (ms > 0) {
+            timerId = setInterval(() => {
+                if (!document.hidden) refreshDashboard();
+            }, ms);
+        }
+    }
+
+    if (intervalSelect) {
+        const saved = localStorage.getItem(storageKey);
+        if (saved !== null) intervalSelect.value = saved;
+        intervalSelect.addEventListener('change', () => {
+            localStorage.setItem(storageKey, intervalSelect.value);
+            schedule();
+        });
+        schedule();
+    }
+
+    refreshBtn && refreshBtn.addEventListener('click', refreshDashboard);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && parseInt(intervalSelect?.value || '0', 10) > 0) refreshDashboard();
+    });
+});
+</script>
+@endpush

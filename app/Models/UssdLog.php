@@ -24,8 +24,11 @@ class UssdLog extends Model
         'network_name',
         'status',
         'logged_at',
+        'reconciled_at',
         'client_price',
         'final_user_string',
+        'gateway_error',
+        'last_app_response',
     ];
 
     protected function casts(): array
@@ -38,11 +41,27 @@ class UssdLog extends Model
             'hops' => 'integer',
             'created_at' => 'datetime',
             'logged_at' => 'datetime',
+            'reconciled_at' => 'datetime',
         ];
     }
 
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class, 'client_id');
+    }
+
+    public function isReconciled(): bool
+    {
+        return $this->reconciled_at !== null || (float) ($this->upstream_cost ?? 0) > 0;
+    }
+
+    public function effectiveBilled(): float
+    {
+        return round((float) ($this->client_price ?? $this->cost ?? 0), 2);
+    }
+
+    public function margin(): float
+    {
+        return round($this->effectiveBilled() - (float) ($this->upstream_cost ?? 0), 2);
     }
 }

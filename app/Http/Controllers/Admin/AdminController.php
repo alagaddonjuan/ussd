@@ -15,10 +15,13 @@ use App\Models\UssdLog;
 use App\Models\UssdMenu;
 use App\Models\UssdPricing;
 use App\Models\WebhookLog;
+use App\Services\AfricasTalkingService;
 use App\Services\MaintenanceBillingService;
 use App\Services\PerfexCrmService;
 use App\Services\UssdEngineService;
+use App\Services\UssdReconciliationService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,9 +56,7 @@ class AdminController extends Controller
             ->where('kyc_status', '!=', 'approved')
             ->count();
         $recentWebhookErrors = WebhookLog::query()
-            ->where('outcome', '!=', 'ok')
-            ->where('outcome', '!=', 'Success')
-            ->where('outcome', '!=', 'charge.success')
+            ->whereNotIn('outcome', ['ok', 'Success', 'charge.success', 'reconciled', 'replayed:ok', 'replayed:reconciled'])
             ->where('created_at', '>=', now()->subDay())
             ->count();
 
@@ -355,18 +356,243 @@ class AdminController extends Controller
         return back()->with('status', "Saved telco USSD rate for {$data['network_name']}.");
     }
 
-    public function logs(Request $request): View
+    public function logs(Request $request, UssdEngineService $engine): View
     {
-        $tab = $request->query('tab', 'ussd');
+        $data = $this->buildLogsData($request, $engine);
 
-        $ussdLogs = UssdLog::query()->with('client')->orderByDesc('id')->limit(50)->get();
+        return view('admin.logs', $data);
+    }
+
+    public function liveLogs(Request $request, UssdEngineService $engine): JsonResponse
+    {
+        $data = $this->buildLogsData($request, $engine);
+        $html = view('admin.partials._logs-table', $data)->render();
+        $summary = $data['ussdSummary'];
+
+        return response()->json([
+            'html' => $html,
+            'summary' => [
+                'total_sessions' => number_format($summary['total_sessions']),
+                'total_billed' => '₦'.number_format($summary['total_billed'], 2),
+                'total_upstream' => '₦'.number_format($summary['total_upstream'], 2),
+                'total_margin' => '₦'.number_format($summary['total_margin'], 2),
+                'unreconciled_count' => number_format($summary['unreconciled_count']),
+                'zero_cost_count' => number_format($summary['zero_cost_count']),
+                'failed_count' => number_format($summary['failed_count']),
+                'webhook_failures' => number_format($summary['webhook_failures']),
+            ],
+            'counts' => $data['tabCounts'],
+            'updated_at' => now()->format('H:i:s'),
+        ]);
+    }
+
+    public function atBalance(AfricasTalkingService $at): JsonResponse
+    {
+        return response()->json($at->getApplicationBalance());
+    }
+
+    public function reconcileAtCsv(Request $request, UssdReconciliationService $reconciler): RedirectResponse
+    {
+        $data = $request->validate([
+            'csv_file' => ['nullable', 'file', 'mimes:csv,txt', 'max:5120'],
+            'csv_text' => ['nullable', 'string', 'max:500000'],
+            'action' => ['required', 'in:preview,apply'],
+        ]);
+
+        $raw = '';
+        if ($request->hasFile('csv_file')) {
+            $raw = (string) file_get_contents($request->file('csv_file')->getRealPath());
+        } elseif (! empty($data['csv_text'])) {
+            $raw = (string) $data['csv_text'];
+        }
+
+        if (trim($raw) === '') {
+            return redirect()->route('admin.logs', ['tab' => 'reconcile'])
+                ->withErrors(['reconcile' => 'Upload an Africa\'s Talking CSV export or paste session rows to verify.']);
+        }
+
+        $parsedRows = $reconciler->parseInput($raw);
+        if (empty($parsedRows)) {
+            return redirect()->route('admin.logs', ['tab' => 'reconcile'])
+                ->withErrors(['reconcile' => 'Could not detect any valid USSD session rows in the input.']);
+        }
+
+        if ($data['action'] === 'apply') {
+            $summary = $reconciler->apply($parsedRows);
+            $this->recordAudit(
+                $request,
+                'ussd.reconcile_csv',
+                "AT CSV reconciliation: created={$summary['created']}, updated={$summary['updated']}, skipped={$summary['skipped']}, charged=₦{$summary['total_delta_charged']}"
+            );
+
+            return redirect()->route('admin.logs', ['tab' => 'ussd'])
+                ->with('status', "Africa's Talking verification applied: {$summary['created']} missing session(s) backfilled, {$summary['updated']} session(s) reconciled, ₦".number_format($summary['total_delta_charged'], 2).' net billed.');
+        }
+
+        $analysis = $reconciler->analyze($parsedRows);
+        $previewItems = array_map(function (array $item) {
+            return [
+                'at' => $item['at'],
+                'client_name' => $item['client']?->name ?? 'Unknown Client',
+                'multiplier' => $item['client']?->getUssdCostMultiplier(),
+                'log_id' => $item['log']?->id,
+                'log_session_id' => $item['log']?->session_id,
+                'state' => $item['state'],
+                'expected_billed' => $item['expected_billed'],
+                'local_upstream' => $item['local_upstream'],
+                'local_billed' => $item['local_billed'],
+                'delta' => $item['delta'],
+            ];
+        }, $analysis['items']);
+
+        return redirect()->route('admin.logs', ['tab' => 'reconcile'])
+            ->with('at_reconcile_preview', [
+                'totals' => $analysis['totals'],
+                'items' => $previewItems,
+                'raw_csv' => $raw,
+            ]);
+    }
+
+    public function reconcileSingleUssdLog(
+        Request $request,
+        UssdLog $ussdLog,
+        UssdReconciliationService $reconciler
+    ): RedirectResponse {
+        $data = $request->validate([
+            'at_cost' => ['required', 'numeric', 'min:0', 'max:100000'],
+            'status' => ['nullable', 'string', 'max:50'],
+            'duration_s' => ['nullable', 'numeric', 'min:0', 'max:3600'],
+        ]);
+
+        $durationMs = isset($data['duration_s']) && $data['duration_s'] !== null && $data['duration_s'] !== ''
+            ? (int) round(((float) $data['duration_s']) * 1000)
+            : null;
+
+        $res = $reconciler->reconcileSingleLog(
+            $ussdLog,
+            (float) $data['at_cost'],
+            $data['status'] ?: null,
+            $durationMs
+        );
+
+        $this->recordAudit(
+            $request,
+            'ussd.reconcile_single',
+            "Reconciled USSD log #{$ussdLog->id} ({$ussdLog->session_id}): AT=₦{$res['at_cost']}, Ours=₦{$res['client_charge']}, Delta=₦{$res['delta']}",
+            $ussdLog->client_id
+        );
+
+        return back()->with('status', "Reconciled session #{$ussdLog->id}: AT cost ₦".number_format($res['at_cost'], 2).', billed client ₦'.number_format($res['client_charge'], 2).'.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildLogsData(Request $request, UssdEngineService $engine): array
+    {
+        $tab = (string) $request->query('tab', 'ussd');
+        $search = trim((string) $request->query('q', ''));
+        $statusFilter = trim((string) $request->query('status', 'all'));
+        $dateFrom = trim((string) $request->query('date_from', ''));
+        $dateTo = trim((string) $request->query('date_to', ''));
+
+        $ussdBaseQuery = UssdLog::query()
+            ->with('client')
+            ->when($search !== '', function ($q) use ($search): void {
+                $q->where(function ($sub) use ($search): void {
+                    $sub->where('phone_number', 'like', "%{$search}%")
+                        ->orWhere('session_id', 'like', "%{$search}%")
+                        ->orWhere('service_code', 'like', "%{$search}%")
+                        ->orWhere('gateway_error', 'like', "%{$search}%")
+                        ->orWhereHas('client', fn ($cq) => $cq->where('name', 'like', "%{$search}%"));
+                });
+            })
+            ->when($dateFrom !== '', fn ($q) => $q->where('created_at', '>=', "{$dateFrom} 00:00:00"))
+            ->when($dateTo !== '', fn ($q) => $q->where('created_at', '<=', "{$dateTo} 23:59:59"));
+
+        $filteredSummaryQuery = clone $ussdBaseQuery;
+        $this->applyUssdStatusFilter($ussdBaseQuery, $statusFilter);
+
+        $ussdLogs = (clone $ussdBaseQuery)
+            ->orderByDesc('id')
+            ->paginate(30)
+            ->withQueryString();
+
+        $ussdLogs->getCollection()->transform(function (UssdLog $log) use ($engine) {
+            $log->estimated_at_cost = $engine->estimateAtUpstreamCost('', (string) ($log->network_name ?: $log->phone_number));
+
+            return $log;
+        });
+
+        $summaryRow = (clone $filteredSummaryQuery)
+            ->selectRaw('COUNT(*) as total_sessions')
+            ->selectRaw('COALESCE(SUM(COALESCE(client_price, cost, 0)), 0) as total_billed')
+            ->selectRaw('COALESCE(SUM(COALESCE(upstream_cost, 0)), 0) as total_upstream')
+            ->selectRaw('SUM(CASE WHEN reconciled_at IS NULL AND COALESCE(upstream_cost, 0) <= 0 THEN 1 ELSE 0 END) as unreconciled_count')
+            ->selectRaw('SUM(CASE WHEN COALESCE(client_price, cost, 0) <= 0 THEN 1 ELSE 0 END) as zero_cost_count')
+            ->selectRaw("SUM(CASE WHEN LOWER(COALESCE(status, '')) IN ('failed', 'rejected', 'incomplete') OR gateway_error IS NOT NULL THEN 1 ELSE 0 END) as failed_count")
+            ->first();
+
+        $totalBilled = round((float) ($summaryRow->total_billed ?? 0), 2);
+        $totalUpstream = round((float) ($summaryRow->total_upstream ?? 0), 2);
+        $webhookFailures = WebhookLog::query()
+            ->whereNotIn('outcome', ['ok', 'Success', 'charge.success', 'reconciled', 'replayed:ok', 'replayed:reconciled'])
+            ->where('created_at', '>=', now()->subDay())
+            ->count();
+
+        $ussdSummary = [
+            'total_sessions' => (int) ($summaryRow->total_sessions ?? 0),
+            'total_billed' => $totalBilled,
+            'total_upstream' => $totalUpstream,
+            'total_margin' => round($totalBilled - $totalUpstream, 2),
+            'unreconciled_count' => (int) ($summaryRow->unreconciled_count ?? 0),
+            'zero_cost_count' => (int) ($summaryRow->zero_cost_count ?? 0),
+            'failed_count' => (int) ($summaryRow->failed_count ?? 0),
+            'webhook_failures' => $webhookFailures,
+        ];
+
         $smsLogs = SmsLog::query()->with('client')->orderByDesc('id')->limit(50)->get();
         $airtimeLogs = AirtimeLog::query()->with('client')->orderByDesc('id')->limit(50)->get();
         $transactions = Transaction::query()->with('client')->orderByDesc('id')->limit(50)->get();
         $webhookLogs = WebhookLog::query()->orderByDesc('id')->limit(50)->get();
         $auditLogs = AdminAuditLog::query()->with(['actor', 'targetClient'])->orderByDesc('id')->limit(50)->get();
 
-        return view('admin.logs', compact('tab', 'ussdLogs', 'smsLogs', 'airtimeLogs', 'transactions', 'webhookLogs', 'auditLogs'));
+        $tabCounts = [
+            'ussd' => $ussdLogs->total(),
+            'sms' => $smsLogs->count(),
+            'airtime' => $airtimeLogs->count(),
+            'transactions' => $transactions->count(),
+            'webhooks' => $webhookLogs->count(),
+            'audit' => $auditLogs->count(),
+        ];
+
+        return compact(
+            'tab',
+            'search',
+            'statusFilter',
+            'dateFrom',
+            'dateTo',
+            'ussdLogs',
+            'ussdSummary',
+            'smsLogs',
+            'airtimeLogs',
+            'transactions',
+            'webhookLogs',
+            'auditLogs',
+            'tabCounts'
+        );
+    }
+
+    protected function applyUssdStatusFilter($query, string $statusFilter): void
+    {
+        match ($statusFilter) {
+            'unreconciled' => $query->whereNull('reconciled_at')->where(fn ($q) => $q->whereNull('upstream_cost')->orWhere('upstream_cost', '<=', 0)),
+            'zero_cost' => $query->whereRaw('COALESCE(client_price, cost, 0) <= 0'),
+            'incomplete' => $query->whereRaw("LOWER(COALESCE(status, '')) = 'incomplete'"),
+            'failed' => $query->where(fn ($q) => $q->whereRaw("LOWER(COALESCE(status, '')) IN ('failed', 'rejected')")->orWhereNotNull('gateway_error')),
+            'success' => $query->whereRaw("LOWER(COALESCE(status, '')) = 'success'"),
+            default => null,
+        };
     }
 
     public function replayWebhook(Request $request, WebhookLog $webhookLog, UssdEngineService $engine): RedirectResponse
@@ -383,8 +609,8 @@ class AdminController extends Controller
         $start = microtime(true);
         $outcome = 'replayed';
         if (str_contains((string) $webhookLog->endpoint, 'events')) {
-            $engine->reconcileEventCost($payload);
-            $outcome = 'replayed:reconciled';
+            $res = $engine->reconcileEventCost($payload);
+            $outcome = ($res['ok'] ?? true) ? 'replayed:reconciled' : ('replayed:'.($res['outcome'] ?? 'error'));
         } else {
             $reply = $engine->handleCallback($payload, true);
             $outcome = str_starts_with($reply, 'END Error:') ? 'replayed:rejected' : 'replayed:ok';

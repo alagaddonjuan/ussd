@@ -400,4 +400,149 @@ class UssdCallbackTest extends TestCase
         ])->assertOk();
         $this->assertSame("CON Welcome to Q4 Services\n1. Play Games\n2. Support", $rRestored->getContent());
     }
+
+    public function test_multi_hop_session_consolidates_without_zero_cost_duplicates(): void
+    {
+        $tier = PricingTier::create(['tier_name' => 'Basic Plan']);
+        $client = Client::create([
+            'name' => 'Modern Lottery',
+            'email' => 'ml-multi@example.com',
+            'password' => Hash::make('secret123'),
+            'ussd_code' => '*347*102#',
+            'token_balance' => 200.00,
+            'status' => 'active',
+            'pricing_tier_id' => $tier->id,
+        ]);
+
+        $menu = UssdMenu::create([
+            'client_id' => $client->id,
+            'menu_name' => 'ML Flow',
+            'is_active' => true,
+            'is_archived' => false,
+        ]);
+        $root = UssdMenuItem::create([
+            'menu_id' => $menu->id,
+            'parent_item_id' => null,
+            'option_trigger' => 'ROOT',
+            'response_type' => 'CON',
+            'response_text' => "Welcome\n1. Games",
+        ]);
+        $games = UssdMenuItem::create([
+            'menu_id' => $menu->id,
+            'parent_item_id' => $root->id,
+            'option_trigger' => '1',
+            'response_type' => 'CON',
+            'response_text' => "Pick\n1. Play",
+        ]);
+        UssdMenuItem::create([
+            'menu_id' => $menu->id,
+            'parent_item_id' => $games->id,
+            'option_trigger' => '1',
+            'response_type' => 'END',
+            'response_text' => 'Ticket Confirmed',
+        ]);
+
+        foreach (['', '1', '1*0', '1*1'] as $text) {
+            $this->post('/ussd', [
+                'sessionId' => 'AT-CONSOLIDATE-1',
+                'serviceCode' => '*347*102#',
+                'phoneNumber' => '+2348034202984',
+                'networkCode' => '62130',
+                'text' => $text,
+            ])->assertOk();
+        }
+
+        // Only ONE row should exist for the session (no duplicate hop rows)
+        $this->assertSame(1, UssdLog::query()->where('session_id', 'AT-CONSOLIDATE-1')->count());
+        $midLog = UssdLog::query()->where('session_id', 'AT-CONSOLIDATE-1')->firstOrFail();
+        $this->assertSame(4, $midLog->hops);
+
+        // Now AT /ussd/events arrives with final cost NGN 15.0000 -> 4x = 60.00
+        $this->post('/ussd/events', [
+            'sessionId' => 'AT-CONSOLIDATE-1',
+            'serviceCode' => '*347*102#',
+            'phoneNumber' => '+2348034202984',
+            'networkCode' => '62130',
+            'durationInMillis' => 21000,
+            'hopsCount' => 4,
+            'status' => 'Success',
+            'cost' => 'NGN 15.0000',
+        ])->assertOk();
+
+        $this->assertSame(1, UssdLog::query()->where('session_id', 'AT-CONSOLIDATE-1')->count());
+        $finalLog = UssdLog::query()->where('session_id', 'AT-CONSOLIDATE-1')->firstOrFail();
+        $this->assertEquals(60.00, $finalLog->cost);
+        $this->assertEquals(60.00, $finalLog->client_price);
+        $this->assertEquals(15.00, $finalLog->upstream_cost);
+        $this->assertSame(21000, $finalLog->duration_ms);
+        $this->assertNotNull($finalLog->reconciled_at);
+
+        $client->refresh();
+        $this->assertEquals(140.00, $client->token_balance);
+    }
+
+    public function test_events_records_errors_low_balance_and_unknown_clients(): void
+    {
+        $tier = PricingTier::create(['tier_name' => 'Basic Plan']);
+        $client = Client::create([
+            'name' => 'Low Wallet Co',
+            'email' => 'lowwallet@example.com',
+            'password' => Hash::make('secret123'),
+            'ussd_code' => '*347*777#',
+            'token_balance' => 5.00,
+            'status' => 'active',
+            'pricing_tier_id' => $tier->id,
+        ]);
+
+        // Direct event where AT billed NGN 7.50 (4x = 30.00) must charge full 30.00 even if balance < 30
+        $this->post('/ussd/events', [
+            'sessionId' => 'AT-DIRECT-LOW-1',
+            'serviceCode' => '*347*777#',
+            'phoneNumber' => '+2349131108156',
+            'networkCode' => '62130',
+            'durationInMillis' => 1000,
+            'hopsCount' => 1,
+            'status' => 'Incomplete',
+            'cost' => 'NGN 7.5000',
+            'errorMessage' => 'User cancelled session',
+        ])->assertOk();
+
+        $client->refresh();
+        $this->assertEquals(-25.00, $client->token_balance);
+        $this->assertDatabaseHas('ussd_logs', [
+            'session_id' => 'AT-DIRECT-LOW-1',
+            'status' => 'Incomplete',
+            'gateway_error' => 'User cancelled session',
+            'upstream_cost' => 7.5,
+            'client_price' => 30.00,
+        ]);
+
+        // Subsequent Hop 1 with <= 0 balance is rejected while still logged
+        $menu = UssdMenu::create(['client_id' => $client->id, 'menu_name' => 'M', 'is_active' => true]);
+        UssdMenuItem::create(['menu_id' => $menu->id, 'option_trigger' => 'ROOT', 'response_type' => 'CON', 'response_text' => 'Hi']);
+
+        $rejected = $this->post('/ussd', [
+            'sessionId' => 'AT-ZERO-BAL-1',
+            'serviceCode' => '*347*777#',
+            'phoneNumber' => '+2349131108156',
+            'text' => '',
+        ])->assertOk();
+        $this->assertStringContainsString('Insufficient wallet balance', $rejected->getContent());
+        $this->assertDatabaseHas('ussd_logs', [
+            'session_id' => 'AT-ZERO-BAL-1',
+            'status' => 'Rejected',
+        ]);
+
+        // Unknown service code in /events records error outcome in webhook_logs
+        $this->post('/ussd/events', [
+            'sessionId' => 'AT-UNKNOWN-99',
+            'serviceCode' => '*999*999#',
+            'status' => 'Success',
+            'cost' => 'NGN 7.5000',
+        ])->assertOk();
+        $this->assertDatabaseHas('webhook_logs', [
+            'endpoint' => '/ussd/events',
+            'outcome' => 'error:unknown_client',
+        ]);
+    }
 }

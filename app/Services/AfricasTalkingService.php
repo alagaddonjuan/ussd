@@ -7,6 +7,61 @@ use Illuminate\Support\Facades\Http;
 class AfricasTalkingService
 {
     /**
+     * Fetch the configured Africa's Talking application wallet balance (read-only).
+     *
+     * @return array{ok: bool, configured: bool, balance?: string, raw?: mixed, message?: string}
+     */
+    public function getApplicationBalance(): array
+    {
+        $apiKey = config('services.africastalking.api_key');
+        $username = config('services.africastalking.username');
+        $dryRun = filter_var(config('services.africastalking.dry_run', true), FILTER_VALIDATE_BOOLEAN);
+
+        if ($dryRun || empty($apiKey) || empty($username)) {
+            return [
+                'ok' => false,
+                'configured' => false,
+                'message' => 'AT live credentials not configured (dry-run mode).',
+            ];
+        }
+
+        $baseUrl = rtrim((string) config('services.africastalking.base_url'), '/');
+
+        try {
+            $response = Http::withHeaders([
+                'apiKey' => $apiKey,
+                'Accept' => 'application/json',
+            ])->timeout(10)->get("{$baseUrl}/version1/user", [
+                'username' => $username,
+            ]);
+
+            if (! $response->successful()) {
+                return [
+                    'ok' => false,
+                    'configured' => true,
+                    'message' => 'AT User API returned HTTP '.$response->status(),
+                ];
+            }
+
+            $data = $response->json();
+            $balance = $data['UserData']['balance'] ?? null;
+
+            return [
+                'ok' => $balance !== null,
+                'configured' => true,
+                'balance' => $balance ? (string) $balance : null,
+                'raw' => $data,
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'ok' => false,
+                'configured' => true,
+                'message' => 'AT API unreachable: '.$e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Send an SMS via Africa's Talking (or simulate when dry_run/no key).
      *
      * @return array{ok: bool, status: string, message: string, raw?: mixed}

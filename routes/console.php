@@ -30,7 +30,7 @@ Artisan::command('q4:health-check {--threshold=5 : Minimum failed webhooks in 60
     $threshold = max(1, (int) $this->option('threshold'));
     $windowMinutes = 60;
     $failures = WebhookLog::query()
-        ->whereNotIn('outcome', ['ok', 'Success', 'charge.success', 'reconciled'])
+        ->whereNotIn('outcome', ['ok', 'Success', 'charge.success', 'reconciled', 'replayed:ok', 'replayed:reconciled'])
         ->where('created_at', '>=', now()->subMinutes($windowMinutes))
         ->orderByDesc('id')
         ->get();

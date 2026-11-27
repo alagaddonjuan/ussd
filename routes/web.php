@@ -60,6 +60,7 @@ Route::post('/logout', [AuthController::class, 'logout'])
 */
 Route::middleware(['auth', 'active.client'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/live', [DashboardController::class, 'live'])->name('dashboard.live');
 
     // Messaging & Airtime
     Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
@@ -71,6 +72,7 @@ Route::middleware(['auth', 'active.client'])->group(function () {
 
     // USSD Menus & Tree Builder
     Route::get('/ussd-menus', [UssdMenuController::class, 'index'])->name('ussd.menus.index');
+    Route::get('/ussd-menus/logs/live', [UssdMenuController::class, 'liveLogs'])->name('ussd.logs.live');
     Route::post('/ussd-menus', [UssdMenuController::class, 'store'])->name('ussd.menus.store');
     Route::get('/ussd-menus/{menu}', [UssdMenuController::class, 'show'])->name('ussd.menus.show');
     Route::post('/ussd-menus/{menu}/activate', [UssdMenuController::class, 'setActive'])->name('ussd.menus.activate');
@@ -131,6 +133,10 @@ Route::middleware(['auth', 'active.client'])->group(function () {
         Route::post('/telco-rates', [AdminController::class, 'storeTelcoRate'])->name('telco-rates.store');
 
         Route::get('/logs', [AdminController::class, 'logs'])->name('logs');
+        Route::get('/logs/live', [AdminController::class, 'liveLogs'])->name('logs.live');
+        Route::get('/logs/at-balance', [AdminController::class, 'atBalance'])->name('logs.at-balance');
+        Route::post('/logs/reconcile', [AdminController::class, 'reconcileAtCsv'])->name('logs.reconcile');
+        Route::post('/logs/{ussdLog}/reconcile', [AdminController::class, 'reconcileSingleUssdLog'])->name('logs.reconcile-single');
         Route::post('/webhooks/{webhookLog}/replay', [AdminController::class, 'replayWebhook'])->name('webhooks.replay');
         Route::get('/reports/{type}', [AdminController::class, 'exportCsv'])->name('reports.export');
 

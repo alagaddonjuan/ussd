@@ -84,7 +84,23 @@
     </div>
 
     <div class="box border border-n30">
-        <h4 class="h4 bb-dashed pb-4 mb-4">Recent USSD Session Logs</h4>
+        <div class="bb-dashed pb-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h4 class="h4">Recent USSD Session Logs</h4>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs text-n100" id="client-ussd-updated">Updated {{ now()->format('H:i:s') }}</span>
+                <select id="client-ussd-auto-refresh" aria-label="Auto refresh USSD logs"
+                    class="rounded-2xl border border-n30 bg-primary/5 px-2.5 py-1 text-xs font-medium">
+                    <option value="0">Auto: Off</option>
+                    <option value="5000">Auto: 5s</option>
+                    <option value="10000" selected>Auto: 10s</option>
+                    <option value="30000">Auto: 30s</option>
+                </select>
+                <button type="button" id="client-ussd-refresh-btn" class="btn-outline py-1 px-3 text-xs">
+                    <i class="las la-sync" id="client-ussd-refresh-icon"></i>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full whitespace-nowrap text-sm">
                 <thead>
@@ -100,35 +116,72 @@
                         <th class="px-4 py-3 text-start">Status</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @forelse ($ussdLogs as $log)
-                        @php
-                            $st = strtolower((string) ($log->status ?: 'success'));
-                            $stClass = $st === 'success'
-                                ? 'bg-[#10B981]/15 text-[#10B981]'
-                                : ($st === 'incomplete' ? 'bg-[#F59E0B]/15 text-[#F59E0B]' : 'bg-error/15 text-error');
-                        @endphp
-                        <tr class="even:bg-secondary/5">
-                            <td class="px-4 py-2.5 text-xs text-n100">{{ optional($log->created_at)->format('M d, Y h:i A') }}</td>
-                            <td class="px-4 py-2.5">{{ $log->service_code }}</td>
-                            <td class="px-4 py-2.5 font-medium">{{ $log->phone_number }}</td>
-                            <td class="px-4 py-2.5 text-xs">{{ $log->network_name ?: '—' }}</td>
-                            <td class="px-4 py-2.5 text-xs">{{ $log->hops ?? 1 }}</td>
-                            <td class="px-4 py-2.5 text-xs">{{ $log->duration_ms ? round($log->duration_ms / 1000) . 's' : '—' }}</td>
-                            <td class="px-4 py-2.5">{{ \Illuminate\Support\Str::limit($log->session_data, 28) }}</td>
-                            <td class="px-4 py-2.5 font-semibold">₦{{ number_format((float) $log->cost, 2) }}</td>
-                            <td class="px-4 py-2.5">
-                                <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $stClass }}">
-                                    {{ ucfirst($log->status ?: 'Success') }}
-                                </span>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="9" class="px-4 py-6 text-center text-n100">No USSD logs recorded yet.</td></tr>
-                    @endforelse
+                <tbody id="client-ussd-logs-tbody">
+                    @include('client.partials._ussd-logs-rows')
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 @endsection
+
+@push('page-js')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tbody = document.getElementById('client-ussd-logs-tbody');
+    const refreshBtn = document.getElementById('client-ussd-refresh-btn');
+    const refreshIcon = document.getElementById('client-ussd-refresh-icon');
+    const intervalSelect = document.getElementById('client-ussd-auto-refresh');
+    const updatedLabel = document.getElementById('client-ussd-updated');
+    const storageKey = 'q4_client_ussd_refresh_ms';
+    let timerId = null;
+    let busy = false;
+
+    async function refreshLogs() {
+        if (busy || !tbody) return;
+        busy = true;
+        refreshIcon && refreshIcon.classList.add('animate-spin');
+        try {
+            const res = await fetch(@json(route('ussd.logs.live')), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            tbody.innerHTML = data.html;
+            if (updatedLabel && data.updated_at) updatedLabel.textContent = 'Updated ' + data.updated_at;
+        } catch (e) {
+            if (updatedLabel) updatedLabel.textContent = 'Sync retry pending';
+        } finally {
+            busy = false;
+            refreshIcon && refreshIcon.classList.remove('animate-spin');
+        }
+    }
+
+    function schedule() {
+        if (timerId) clearInterval(timerId);
+        const ms = parseInt(intervalSelect?.value || '0', 10);
+        if (ms > 0) {
+            timerId = setInterval(() => {
+                if (!document.hidden) refreshLogs();
+            }, ms);
+        }
+    }
+
+    if (intervalSelect) {
+        const saved = localStorage.getItem(storageKey);
+        if (saved !== null) intervalSelect.value = saved;
+        intervalSelect.addEventListener('change', () => {
+            localStorage.setItem(storageKey, intervalSelect.value);
+            schedule();
+        });
+        schedule();
+    }
+
+    refreshBtn && refreshBtn.addEventListener('click', refreshLogs);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && parseInt(intervalSelect?.value || '0', 10) > 0) refreshLogs();
+    });
+});
+</script>
+@endpush

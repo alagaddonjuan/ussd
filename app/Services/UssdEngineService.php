@@ -13,6 +13,20 @@ use Illuminate\Support\Facades\Log;
 
 class UssdEngineService
 {
+    protected ?string $lastGatewayError = null;
+
+    protected ?string $lastCallbackOutcome = null;
+
+    public function getLastGatewayError(): ?string
+    {
+        return $this->lastGatewayError;
+    }
+
+    public function getLastCallbackOutcome(): ?string
+    {
+        return $this->lastCallbackOutcome;
+    }
+
     /**
      * Parse raw Africa's Talking USSD text while honoring "0" as back navigation.
      *
@@ -44,9 +58,12 @@ class UssdEngineService
      */
     public function handleCallback(array $payload, bool $billClient = true): string
     {
-        $sessionId = (string) ($payload['sessionId'] ?? '');
+        $this->lastGatewayError = null;
+        $this->lastCallbackOutcome = 'ok';
+
+        $sessionId = trim((string) ($payload['sessionId'] ?? ''));
         $serviceCode = trim((string) ($payload['serviceCode'] ?? ''));
-        $phoneNumber = (string) ($payload['phoneNumber'] ?? '');
+        $phoneNumber = trim((string) ($payload['phoneNumber'] ?? ''));
         $rawText = (string) ($payload['text'] ?? '');
         $networkCode = trim((string) ($payload['networkCode'] ?? ''));
 
@@ -55,11 +72,21 @@ class UssdEngineService
 
         $client = Client::query()->where('ussd_code', $serviceCode)->first();
         if (! $client) {
+            $this->lastCallbackOutcome = 'rejected:unknown_code';
+            $this->lastGatewayError = "Unrecognized USSD code: {$serviceCode}";
+
             return 'END Error: USSD Code not recognized.';
         }
 
         if ($client->status === 'suspended') {
-            return 'END Error: Client account is suspended.';
+            $this->lastCallbackOutcome = 'rejected:suspended';
+            $this->lastGatewayError = 'Client account is suspended.';
+            $reply = 'END Error: Client account is suspended.';
+            if ($billClient) {
+                $this->billAndLogSession($client, $networkCode, $phoneNumber, $sessionId, $serviceCode, $cleanedText, $rawText, $payload, 'Failed', $this->lastGatewayError, $reply, false);
+            }
+
+            return $reply;
         }
 
         $menu = UssdMenu::query()
@@ -69,14 +96,53 @@ class UssdEngineService
             ->first();
 
         if (! $menu) {
-            return 'END Error: No active menu found.';
+            $this->lastCallbackOutcome = 'rejected:no_menu';
+            $this->lastGatewayError = 'No active menu found.';
+            $reply = 'END Error: No active menu found.';
+            if ($billClient) {
+                $this->billAndLogSession($client, $networkCode, $phoneNumber, $sessionId, $serviceCode, $cleanedText, $rawText, $payload, 'Failed', $this->lastGatewayError, $reply, true);
+            }
+
+            return $reply;
+        }
+
+        if ($billClient && $rawText === '' && (float) $client->token_balance <= 0) {
+            $hasExistingSession = $sessionId !== '' && UssdLog::query()
+                ->where('client_id', $client->id)
+                ->where('session_id', $sessionId)
+                ->exists();
+
+            if (! $hasExistingSession) {
+                $this->lastCallbackOutcome = 'rejected:low_balance';
+                $this->lastGatewayError = 'Insufficient wallet balance.';
+                $reply = 'END Service unavailable: Insufficient wallet balance.';
+                $this->billAndLogSession($client, $networkCode, $phoneNumber, $sessionId, $serviceCode, $cleanedText, $rawText, $payload, 'Rejected', $this->lastGatewayError, $reply, true);
+
+                return $reply;
+            }
+        }
+
+        $reply = $this->resolveMenuResponse($menu, $inputs, $sessionId, $serviceCode, $phoneNumber, $cleanedText);
+
+        if ($this->lastGatewayError !== null) {
+            $this->lastCallbackOutcome = 'upstream_error';
+            $initialStatus = 'Failed';
+        } elseif (str_starts_with($reply, 'END Error:')) {
+            $this->lastCallbackOutcome = 'rejected';
+            $initialStatus = 'Failed';
+        } elseif (str_starts_with($reply, 'END ')) {
+            $this->lastCallbackOutcome = 'ok';
+            $initialStatus = 'Success';
+        } else {
+            $this->lastCallbackOutcome = 'ok';
+            $initialStatus = 'In Progress';
         }
 
         if ($billClient) {
-            $this->billAndLogSession($client, $networkCode, $phoneNumber, $sessionId, $serviceCode, $cleanedText, $rawText, $payload);
+            $this->billAndLogSession($client, $networkCode, $phoneNumber, $sessionId, $serviceCode, $cleanedText, $rawText, $payload, $initialStatus, $this->lastGatewayError, $reply, true);
         }
 
-        return $this->resolveMenuResponse($menu, $inputs, $sessionId, $serviceCode, $phoneNumber, $cleanedText);
+        return $reply;
     }
 
     /**
@@ -102,20 +168,53 @@ class UssdEngineService
     }
 
     /**
+     * Estimate per-interval Africa's Talking upstream cost for Nigerian networks.
+     */
+    public function estimateAtUpstreamCost(string $networkCode = '', string $networkNameOrPhone = ''): float
+    {
+        $code = trim($networkCode);
+        if ($code === '62130') {
+            return 7.50;
+        }
+        if ($code === '62120') {
+            return 4.89;
+        }
+        if ($code === '62150') {
+            return 12.00;
+        }
+        if ($code === '62160') {
+            return 4.50;
+        }
+
+        $label = strtolower($this->resolveNetworkName($code, $networkNameOrPhone));
+        if (str_contains($label, 'mtn')) {
+            return 7.50;
+        }
+        if (str_contains($label, 'airtel')) {
+            return 4.89;
+        }
+        if (str_contains($label, 'glo')) {
+            return 12.00;
+        }
+        if (str_contains($label, '9mobile') || str_contains($label, 't2')) {
+            return 4.50;
+        }
+
+        return (float) config('services.ussd.default_cost', 3.50);
+    }
+
+    /**
      * Reconcile final session cost reported by Africa's Talking /events webhook using client tier USSD multiplier.
      *
      * @param  array<string, mixed>  $payload
+     * @return array{ok: bool, outcome: string, reason: ?string, ussd_log_id: ?int}
      */
-    public function reconcileEventCost(array $payload): void
+    public function reconcileEventCost(array $payload): array
     {
         $atCost = $this->parseAtCost($payload['cost'] ?? $payload['at_cost'] ?? null);
-        if ($atCost === null) {
-            return;
-        }
-
         $sessionId = trim((string) ($payload['sessionId'] ?? ''));
         $serviceCode = trim((string) ($payload['serviceCode'] ?? ''));
-        $phoneNumber = (string) ($payload['phoneNumber'] ?? '');
+        $phoneNumber = trim((string) ($payload['phoneNumber'] ?? ''));
         $networkCode = trim((string) ($payload['networkCode'] ?? ''));
         $durationMs = isset($payload['durationInMillis']) && is_numeric($payload['durationInMillis'])
             ? max(0, (int) $payload['durationInMillis'])
@@ -123,8 +222,10 @@ class UssdEngineService
         $explicitHops = isset($payload['hopsCount']) && is_numeric($payload['hopsCount'])
             ? max(1, (int) $payload['hopsCount'])
             : null;
-        $status = trim((string) ($payload['status'] ?? 'Success'));
+        $status = trim((string) ($payload['status'] ?? ''));
         $rawText = (string) ($payload['text'] ?? ($payload['input'] ?? ''));
+        $errorMessage = trim((string) ($payload['errorMessage'] ?? ($payload['error_message'] ?? '')));
+        $lastAppResponse = trim((string) ($payload['lastAppResponse'] ?? ''));
         $networkName = $this->resolveNetworkName($networkCode, $phoneNumber);
 
         $client = $serviceCode !== ''
@@ -145,14 +246,39 @@ class UssdEngineService
                 'sessionId' => $sessionId,
                 'serviceCode' => $serviceCode,
                 'atCost' => $atCost,
+                'errorMessage' => $errorMessage,
             ]);
 
-            return;
+            return [
+                'ok' => false,
+                'outcome' => 'error:unknown_client',
+                'reason' => "Unknown client for serviceCode '{$serviceCode}' (sessionId '{$sessionId}')",
+                'ussd_log_id' => null,
+            ];
         }
 
-        $clientCharge = round($atCost * $client->getUssdCostMultiplier(), 2);
+        $clientCharge = $atCost !== null
+            ? round($atCost * $client->getUssdCostMultiplier(), 2)
+            : null;
 
-        DB::transaction(function () use ($client, $clientCharge, $atCost, $sessionId, $serviceCode, $phoneNumber, $status, $rawText, $durationMs, $explicitHops, $networkName): void {
+        $logId = null;
+
+        DB::transaction(function () use (
+            $client,
+            $clientCharge,
+            $atCost,
+            $sessionId,
+            $serviceCode,
+            $phoneNumber,
+            $status,
+            $rawText,
+            $durationMs,
+            $explicitHops,
+            $networkName,
+            $errorMessage,
+            $lastAppResponse,
+            &$logId
+        ): void {
             $lockedClient = Client::query()->whereKey($client->id)->lockForUpdate()->first();
             if (! $lockedClient) {
                 return;
@@ -168,72 +294,102 @@ class UssdEngineService
 
                 if ($sessionLogs->isNotEmpty()) {
                     $alreadyBilled = round((float) $sessionLogs->sum('cost'), 2);
-                    $delta = round($clientCharge - $alreadyBilled, 2);
 
-                    if ($delta > 0) {
-                        $deduct = min((float) $lockedClient->token_balance, $delta);
-                        if ($deduct > 0) {
-                            $lockedClient->decrement('token_balance', $deduct);
+                    if ($clientCharge !== null) {
+                        $delta = round($clientCharge - $alreadyBilled, 2);
+                        if ($delta > 0) {
+                            $lockedClient->decrement('token_balance', $delta);
+                        } elseif ($delta < 0 && $alreadyBilled > 0) {
+                            $lockedClient->increment('token_balance', abs($delta));
                         }
-                    } elseif ($delta < 0 && $alreadyBilled > 0) {
-                        $lockedClient->increment('token_balance', abs($delta));
                     }
 
                     $lastLog = $sessionLogs->last();
+                    $mergedHops = $explicitHops ?? max((int) $sessionLogs->count(), (int) ($sessionLogs->max('hops') ?? 1));
+
+                    $finalCost = $clientCharge ?? round((float) $lastLog->cost, 2);
+                    $finalClientPrice = $clientCharge ?? round((float) ($lastLog->client_price ?? $lastLog->cost), 2);
+                    $finalUpstream = $atCost ?? round((float) ($lastLog->upstream_cost ?? 0), 4);
+                    $resolvedStatus = $status !== ''
+                        ? $status
+                        : ($errorMessage !== '' ? 'Failed' : ($lastLog->status && $lastLog->status !== 'In Progress' ? $lastLog->status : 'Success'));
+
+                    $lastLog->update([
+                        'cost' => $finalCost,
+                        'client_price' => $finalClientPrice,
+                        'upstream_cost' => $finalUpstream,
+                        'duration_ms' => $durationMs ?? $lastLog->duration_ms,
+                        'hops' => $mergedHops,
+                        'network_name' => $networkName !== 'Unknown' ? $networkName : $lastLog->network_name,
+                        'final_user_string' => $rawText !== '' ? $rawText : $lastLog->final_user_string,
+                        'status' => $resolvedStatus,
+                        'gateway_error' => $errorMessage !== '' ? $errorMessage : $lastLog->gateway_error,
+                        'last_app_response' => $lastAppResponse !== '' ? $lastAppResponse : $lastLog->last_app_response,
+                        'reconciled_at' => now(),
+                    ]);
+
                     if ($sessionLogs->count() > 1) {
                         UssdLog::query()
                             ->where('session_id', $sessionId)
                             ->where('client_id', $lockedClient->id)
                             ->where('id', '!=', $lastLog->id)
-                            ->update([
-                                'cost' => 0,
-                                'client_price' => 0,
-                                'upstream_cost' => 0,
-                            ]);
+                            ->delete();
                     }
 
-                    $lastLog->update([
-                        'cost' => $clientCharge,
-                        'client_price' => $clientCharge,
-                        'upstream_cost' => $atCost,
-                        'duration_ms' => $durationMs ?? $lastLog->duration_ms,
-                        'hops' => $explicitHops ?? max((int) $sessionLogs->count(), (int) ($lastLog->hops ?? 1)),
-                        'network_name' => $networkName !== 'Unknown' ? $networkName : $lastLog->network_name,
-                        'status' => $status !== '' ? $status : ($lastLog->status ?: 'Success'),
-                    ]);
+                    $logId = $lastLog->id;
 
                     return;
                 }
             }
 
-            if ((float) $lockedClient->token_balance >= $clientCharge && $clientCharge > 0) {
-                $lockedClient->decrement('token_balance', $clientCharge);
+            $finalCharge = $clientCharge ?? 0.0;
+            if ($finalCharge > 0) {
+                $lockedClient->decrement('token_balance', $finalCharge);
             }
 
-            UssdLog::create([
+            $resolvedStatus = $status !== '' ? $status : ($errorMessage !== '' ? 'Failed' : 'Success');
+
+            $created = UssdLog::create([
                 'client_id' => $lockedClient->id,
                 'phone_number' => $phoneNumber,
                 'session_id' => $sessionId,
                 'service_code' => $serviceCode !== '' ? $serviceCode : (string) $lockedClient->ussd_code,
-                'session_data' => $rawText !== '' ? $rawText : 'Session Event',
-                'cost' => $clientCharge,
-                'client_price' => $clientCharge,
-                'upstream_cost' => $atCost,
+                'session_data' => $rawText !== '' ? $rawText : ($errorMessage !== '' ? 'Gateway Event Error' : 'Session Event'),
+                'cost' => $finalCharge,
+                'client_price' => $finalCharge,
+                'upstream_cost' => $atCost ?? 0,
                 'duration_ms' => $durationMs,
                 'hops' => $explicitHops ?? 1,
                 'network_name' => $networkName !== 'Unknown' ? $networkName : null,
                 'final_user_string' => $rawText,
-                'status' => $status !== '' ? $status : 'Success',
+                'status' => $resolvedStatus,
+                'gateway_error' => $errorMessage !== '' ? $errorMessage : null,
+                'last_app_response' => $lastAppResponse !== '' ? $lastAppResponse : null,
                 'created_at' => now(),
                 'logged_at' => now(),
+                'reconciled_at' => now(),
             ]);
+
+            $logId = $created->id;
         });
 
         $client->refresh();
         app(LowBalanceNotifier::class)->checkAndNotify($client);
+
+        $outcome = $status !== '' ? $status : ($errorMessage !== '' ? 'Failed' : 'reconciled');
+        if ($atCost === null) {
+            $outcome = $errorMessage !== '' ? 'error:'.$errorMessage : 'reconciled:no_cost';
+        }
+
+        return [
+            'ok' => true,
+            'outcome' => $outcome,
+            'reason' => $errorMessage !== '' ? $errorMessage : null,
+            'ussd_log_id' => $logId,
+        ];
     }
 
-    protected function resolveNetworkName(string $networkCode, string $phoneNumber = ''): string
+    public function resolveNetworkName(string $networkCode, string $phoneNumber = ''): string
     {
         if ($networkCode !== '') {
             $telco = UssdPricing::query()->where('network_code', $networkCode)->first();
@@ -286,7 +442,11 @@ class UssdEngineService
         string $serviceCode,
         string $cleanedText,
         string $rawText,
-        array $payload = []
+        array $payload = [],
+        string $initialStatus = 'Success',
+        ?string $gatewayError = null,
+        ?string $lastAppResponse = null,
+        bool $chargeWallet = true
     ): void {
         try {
             $multiplier = $client->getUssdCostMultiplier();
@@ -309,14 +469,68 @@ class UssdEngineService
                 $realCost = $client->getServicePrice('USSD', $defaultFallback);
             }
 
-            $networkName = $this->resolveNetworkName($networkCode, $phoneNumber);
-            $hops = $cleanedText === '' ? 1 : (substr_count($cleanedText, '*') + 1);
+            if (! $chargeWallet) {
+                $realCost = 0.0;
+            }
 
-            DB::transaction(function () use ($client, $realCost, $atCost, $networkName, $hops, $phoneNumber, $sessionId, $serviceCode, $cleanedText, $rawText): void {
+            $networkName = $this->resolveNetworkName($networkCode, $phoneNumber);
+            $hopsByPath = $rawText === '' ? 1 : (substr_count($rawText, '*') + 2);
+            $sessionData = $cleanedText !== '' ? $cleanedText : 'Main Menu';
+
+            DB::transaction(function () use (
+                $client,
+                $realCost,
+                $atCost,
+                $networkName,
+                $hopsByPath,
+                $phoneNumber,
+                $sessionId,
+                $serviceCode,
+                $sessionData,
+                $rawText,
+                $initialStatus,
+                $gatewayError,
+                $lastAppResponse,
+                $chargeWallet
+            ): void {
                 $lockedClient = Client::query()->whereKey($client->id)->lockForUpdate()->first();
 
-                if ($lockedClient && (float) $lockedClient->token_balance >= $realCost) {
+                if ($chargeWallet && $lockedClient && $realCost > 0) {
                     $lockedClient->decrement('token_balance', $realCost);
+                }
+
+                if ($sessionId !== '') {
+                    $existing = UssdLog::query()
+                        ->where('client_id', $client->id)
+                        ->where('session_id', $sessionId)
+                        ->orderByDesc('id')
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($existing) {
+                        $nextHops = max((int) ($existing->hops ?? 1) + 1, $hopsByPath);
+                        $newCost = round((float) $existing->cost + $realCost, 2);
+                        $newClientPrice = round((float) ($existing->client_price ?? $existing->cost) + $realCost, 2);
+
+                        $existing->update([
+                            'phone_number' => $phoneNumber !== '' ? $phoneNumber : $existing->phone_number,
+                            'service_code' => $serviceCode !== '' ? $serviceCode : $existing->service_code,
+                            'session_data' => $sessionData,
+                            'cost' => $newCost,
+                            'client_price' => $newClientPrice,
+                            'upstream_cost' => $atCost ?? (float) ($existing->upstream_cost ?? 0),
+                            'hops' => $nextHops,
+                            'network_name' => $networkName !== 'Unknown' ? $networkName : $existing->network_name,
+                            'final_user_string' => $rawText,
+                            'status' => $existing->reconciled_at ? $existing->status : $initialStatus,
+                            'gateway_error' => $gatewayError ?: $existing->gateway_error,
+                            'last_app_response' => $lastAppResponse ?: $existing->last_app_response,
+                            'logged_at' => now(),
+                            'reconciled_at' => $atCost !== null ? now() : $existing->reconciled_at,
+                        ]);
+
+                        return;
+                    }
                 }
 
                 UssdLog::create([
@@ -324,23 +538,31 @@ class UssdEngineService
                     'phone_number' => $phoneNumber,
                     'session_id' => $sessionId,
                     'service_code' => $serviceCode,
-                    'session_data' => $cleanedText !== '' ? $cleanedText : 'Main Menu',
+                    'session_data' => $sessionData,
                     'cost' => $realCost,
                     'client_price' => $realCost,
                     'upstream_cost' => $atCost ?? 0,
-                    'hops' => $hops,
+                    'hops' => $hopsByPath,
                     'network_name' => $networkName !== 'Unknown' ? $networkName : null,
                     'final_user_string' => $rawText,
-                    'status' => 'Success',
+                    'status' => $initialStatus,
+                    'gateway_error' => $gatewayError,
+                    'last_app_response' => $lastAppResponse,
                     'created_at' => now(),
                     'logged_at' => now(),
+                    'reconciled_at' => $atCost !== null ? now() : null,
                 ]);
             });
 
             $client->refresh();
             app(LowBalanceNotifier::class)->checkAndNotify($client);
         } catch (\Throwable $e) {
-            Log::error('USSD billing/logging error', ['error' => $e->getMessage()]);
+            Log::error('USSD billing/logging error', [
+                'sessionId' => $sessionId,
+                'serviceCode' => $serviceCode,
+                'error' => $e->getMessage(),
+            ]);
+            $this->lastGatewayError = $this->lastGatewayError ?: ('Logging error: '.$e->getMessage());
         }
     }
 
@@ -423,7 +645,7 @@ class UssdEngineService
 
         try {
             $response = Http::asForm()
-                ->timeout(10)
+                ->timeout(8)
                 ->post($url, [
                     'sessionId' => $sessionId,
                     'serviceCode' => $serviceCode,
@@ -432,13 +654,23 @@ class UssdEngineService
                 ]);
 
             if ($response->successful()) {
-                return (string) $response->body();
+                $body = trim((string) $response->body());
+                if ($body === '' || (! str_starts_with($body, 'CON ') && ! str_starts_with($body, 'END '))) {
+                    $this->lastGatewayError = 'External USSD API returned invalid CON/END response.';
+                    Log::warning('External USSD API invalid body', ['status' => $response->status(), 'body' => mb_substr($body, 0, 200)]);
+
+                    return 'END External service returned an invalid response. Try again later.';
+                }
+
+                return $body;
             }
 
+            $this->lastGatewayError = 'External USSD API HTTP '.$response->status();
             Log::warning('External USSD API returned error status', ['status' => $response->status()]);
 
             return 'END External service is temporarily unavailable. Try again later.';
         } catch (\Throwable $e) {
+            $this->lastGatewayError = 'External USSD API error: '.$e->getMessage();
             Log::error('External USSD API error', ['error' => $e->getMessage()]);
 
             return 'END External service is currently unreachable. Try again later.';

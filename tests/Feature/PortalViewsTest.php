@@ -96,8 +96,14 @@ class PortalViewsTest extends TestCase
             ->assertOk()
             ->assertDontSee("Africa's Talking")
             ->assertDontSee('USSD AT');
+        $this->actingAs($admin)->getJson('/dashboard/live')
+            ->assertOk()
+            ->assertJsonStructure(['token_balance', 'total_ussd', 'recent_ussd_html', 'updated_at']);
         $this->actingAs($admin)->get('/services')->assertOk();
         $this->actingAs($admin)->get('/ussd-menus')->assertOk();
+        $this->actingAs($admin)->getJson('/ussd-menus/logs/live')
+            ->assertOk()
+            ->assertJsonStructure(['html', 'count', 'updated_at']);
         $this->actingAs($admin)->get("/ussd-menus/{$menu->id}")
             ->assertOk()
             ->assertSee('Quick Text-to-Menu Builder')

@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Mail\AnnouncementMail;
 use App\Mail\GatewayAlertMail;
 use App\Models\Client;
+use App\Models\PricingTier;
+use App\Models\UssdLog;
 use App\Models\WebhookLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -211,5 +213,93 @@ class AdminPortalTest extends TestCase
         config(['services.alerts.admin_email' => 'ops@q4iltd.com']);
         $this->artisan('q4:health-check --threshold=1')->assertExitCode(0);
         Mail::assertSent(GatewayAlertMail::class);
+    }
+
+    public function test_admin_live_logs_and_at_csv_reconciliation(): void
+    {
+        $admin = Client::create([
+            'name' => 'Super Admin',
+            'email' => 'admin-rec@example.com',
+            'password' => Hash::make('Password123!'),
+            'is_admin' => true,
+            'status' => 'active',
+        ]);
+
+        $tier = PricingTier::create(['tier_name' => 'Basic Plan']);
+        $client = Client::create([
+            'name' => 'Modern Lottery',
+            'email' => 'ml-rec@example.com',
+            'password' => Hash::make('Password123!'),
+            'ussd_code' => '*347*102#',
+            'token_balance' => 500.00,
+            'status' => 'active',
+            'pricing_tier_id' => $tier->id,
+        ]);
+
+        // Existing unreconciled 0.00 session
+        $unreconciled = UssdLog::create([
+            'client_id' => $client->id,
+            'phone_number' => '+2348034202984',
+            'session_id' => 'AT-UNREC-1',
+            'service_code' => '*347*102#',
+            'session_data' => '1*2',
+            'cost' => 0,
+            'client_price' => 0,
+            'upstream_cost' => 0,
+            'hops' => 4,
+            'status' => 'In Progress',
+            'created_at' => now(),
+            'logged_at' => now(),
+        ]);
+
+        // Live AJAX endpoint returns JSON payload without full page reload
+        $this->actingAs($admin)->getJson('/admin/logs/live?tab=ussd')
+            ->assertOk()
+            ->assertJsonStructure(['html', 'summary', 'counts', 'updated_at']);
+
+        // Single-session manual reconcile
+        $this->actingAs($admin)->post("/admin/logs/{$unreconciled->id}/reconcile", [
+            'at_cost' => 7.50,
+            'status' => 'Success',
+            'duration_s' => 18,
+        ])->assertSessionHas('status');
+
+        $client->refresh();
+        $this->assertEquals(470.00, $client->token_balance); // 7.50 * 4 = 30.00
+
+        // CSV preview & apply reconciliation against AT export (supports both quoted and unquoted AT dates)
+        $csv = implode("\n", [
+            'Date,Service Code,Phone Number,Hops,Duration,Cost,Status',
+            '"November 27, 2026 11:02 AM",*347*102#,+2348034202984,4,21s,NGN 15.0000,Success',
+            'November 27, 2026 9:56 AM,*347*102#,+2349039955683,6,44s,NGN 22.5000,Success',
+        ]);
+
+        $previewRes = $this->actingAs($admin)->post('/admin/logs/reconcile', [
+            'csv_text' => $csv,
+            'action' => 'preview',
+        ]);
+        $previewRes->assertSessionHas('at_reconcile_preview');
+        $preview = session('at_reconcile_preview');
+        $this->assertSame(1, $preview['totals']['mismatch']);
+        $this->assertSame(1, $preview['totals']['missing_local']);
+        $this->assertSame(0, $preview['totals']['unknown_client']);
+
+        $this->actingAs($admin)->post('/admin/logs/reconcile', [
+            'csv_text' => $csv,
+            'action' => 'apply',
+        ])->assertSessionHas('status');
+
+        // Row 1 delta: 60.00 - 30.00 = 30.00; Row 2 missing_local: 22.50 * 4 = 90.00 -> total 120.00 deducted
+        $client->refresh();
+        $this->assertEquals(350.00, $client->token_balance);
+        $this->assertSame(2, UssdLog::query()->where('client_id', $client->id)->count());
+
+        // Re-applying identical CSV stays idempotent
+        $this->actingAs($admin)->post('/admin/logs/reconcile', [
+            'csv_text' => $csv,
+            'action' => 'apply',
+        ])->assertSessionHas('status');
+        $client->refresh();
+        $this->assertEquals(350.00, $client->token_balance);
     }
 }
