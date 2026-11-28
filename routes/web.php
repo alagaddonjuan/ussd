@@ -121,8 +121,11 @@ Route::middleware(['auth', 'active.client'])->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/clients', [AdminController::class, 'clients'])->name('clients');
         Route::put('/clients/{client}', [AdminController::class, 'updateClient'])->name('clients.update');
+        Route::delete('/clients/{client}', [AdminController::class, 'destroyClient'])->name('clients.destroy');
+        Route::post('/clients/bulk-delete', [AdminController::class, 'bulkDestroyClients'])->name('clients.bulk-delete');
         Route::get('/clients/{client}/kyc', [AdminController::class, 'downloadKyc'])->name('clients.kyc.download');
         Route::post('/clients/{client}/perfex-invoice', [AdminController::class, 'pushPerfexInvoice'])->name('clients.perfex-invoice');
+        Route::get('/perfex/invoices', [AdminController::class, 'perfexInvoices'])->name('perfex.invoices');
         Route::post('/clients/{client}/transaction', [AdminController::class, 'manualTransaction'])->name('clients.transaction');
         Route::post('/clients/bill-maintenance', [AdminController::class, 'chargeMaintenance'])->name('clients.bill-maintenance');
 

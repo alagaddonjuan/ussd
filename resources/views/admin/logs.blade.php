@@ -112,27 +112,40 @@
     </div>
 
     <div class="box border border-n30">
-        <div class="tab-navigation mb-6 overflow-x-auto">
-            <a href="{{ route('admin.logs', ['tab' => 'ussd']) }}" class="tab-link {{ $tab === 'ussd' ? 'active' : '' }}">
-                USSD Sessions (<span id="tab-count-ussd">{{ $tabCounts['ussd'] }}</span>)
+        <div class="tab-navigation mb-6 flex-wrap items-center gap-x-3 gap-y-2 pb-1">
+            <a href="{{ route('admin.logs', ['tab' => 'ussd']) }}"
+                class="tab-link inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-sm {{ $tab === 'ussd' ? 'active' : '' }}">
+                <span>USSD Sessions</span>
+                <span id="tab-count-ussd" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">{{ $tabCounts['ussd'] }}</span>
             </a>
-            <a href="{{ route('admin.logs', ['tab' => 'reconcile']) }}" class="tab-link {{ $tab === 'reconcile' ? 'active' : '' }}">
-                Verify vs AT (CSV)
+            <a href="{{ route('admin.logs', ['tab' => 'reconcile']) }}"
+                class="tab-link inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-sm {{ $tab === 'reconcile' ? 'active' : '' }}">
+                <span>Verify vs AT (CSV)</span>
             </a>
-            <a href="{{ route('admin.logs', ['tab' => 'sms']) }}" class="tab-link {{ $tab === 'sms' ? 'active' : '' }}">
-                SMS Logs (<span id="tab-count-sms">{{ $tabCounts['sms'] }}</span>)
+            <a href="{{ route('admin.logs', ['tab' => 'sms']) }}"
+                class="tab-link inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-sm {{ $tab === 'sms' ? 'active' : '' }}">
+                <span>SMS Logs</span>
+                <span id="tab-count-sms" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">{{ $tabCounts['sms'] }}</span>
             </a>
-            <a href="{{ route('admin.logs', ['tab' => 'airtime']) }}" class="tab-link {{ $tab === 'airtime' ? 'active' : '' }}">
-                Airtime Logs (<span id="tab-count-airtime">{{ $tabCounts['airtime'] }}</span>)
+            <a href="{{ route('admin.logs', ['tab' => 'airtime']) }}"
+                class="tab-link inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-sm {{ $tab === 'airtime' ? 'active' : '' }}">
+                <span>Airtime Logs</span>
+                <span id="tab-count-airtime" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">{{ $tabCounts['airtime'] }}</span>
             </a>
-            <a href="{{ route('admin.logs', ['tab' => 'transactions']) }}" class="tab-link {{ $tab === 'transactions' ? 'active' : '' }}">
-                Transactions (<span id="tab-count-transactions">{{ $tabCounts['transactions'] }}</span>)
+            <a href="{{ route('admin.logs', ['tab' => 'transactions']) }}"
+                class="tab-link inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-sm {{ $tab === 'transactions' ? 'active' : '' }}">
+                <span>Transactions</span>
+                <span id="tab-count-transactions" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">{{ $tabCounts['transactions'] }}</span>
             </a>
-            <a href="{{ route('admin.logs', ['tab' => 'webhooks']) }}" class="tab-link {{ $tab === 'webhooks' ? 'active' : '' }}">
-                Webhooks (<span id="tab-count-webhooks">{{ $tabCounts['webhooks'] }}</span>)
+            <a href="{{ route('admin.logs', ['tab' => 'webhooks']) }}"
+                class="tab-link inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-sm {{ $tab === 'webhooks' ? 'active' : '' }}">
+                <span>Webhooks</span>
+                <span id="tab-count-webhooks" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">{{ $tabCounts['webhooks'] }}</span>
             </a>
-            <a href="{{ route('admin.logs', ['tab' => 'audit']) }}" class="tab-link {{ $tab === 'audit' ? 'active' : '' }}">
-                Audit Trail (<span id="tab-count-audit">{{ $tabCounts['audit'] }}</span>)
+            <a href="{{ route('admin.logs', ['tab' => 'audit']) }}"
+                class="tab-link inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-sm {{ $tab === 'audit' ? 'active' : '' }}">
+                <span>Audit Trail</span>
+                <span id="tab-count-audit" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">{{ $tabCounts['audit'] }}</span>
             </a>
         </div>
 

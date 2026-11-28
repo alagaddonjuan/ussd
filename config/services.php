@@ -55,6 +55,7 @@ return [
         'url' => rtrim((string) env('PERFEX_CRM_URL', 'https://crm.q4iltd.com'), '/'),
         'api_token' => env('PERFEX_API_TOKEN'),
         'currency_id' => (int) env('PERFEX_CURRENCY_ID', 1),
+        'payment_mode' => (string) env('PERFEX_PAYMENT_MODE', '1'),
         'auto_sync_invoices' => (bool) env('PERFEX_AUTO_SYNC', false),
     ],
 

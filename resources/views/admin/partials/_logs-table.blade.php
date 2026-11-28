@@ -141,19 +141,17 @@
         </tbody>
     </table>
 @else
-    <table class="w-full whitespace-nowrap text-sm">
+    <table class="w-full text-xs sm:text-sm">
         <thead>
-            <tr class="bg-secondary/5">
-                <th class="px-3 py-3 text-start">Client &amp; Code</th>
-                <th class="px-3 py-3 text-start">Phone &amp; Session</th>
-                <th class="px-3 py-3 text-start">Carrier</th>
-                <th class="px-3 py-3 text-start">Hops / Dur.</th>
-                <th class="px-3 py-3 text-start">Ours (Billed)</th>
-                <th class="px-3 py-3 text-start">AT Cost (Upstream)</th>
-                <th class="px-3 py-3 text-start">Margin</th>
-                <th class="px-3 py-3 text-start">Status</th>
-                <th class="px-3 py-3 text-start">Time</th>
-                <th class="px-3 py-3 text-end">Verify</th>
+            <tr class="bg-secondary/5 text-[11px] uppercase tracking-wide text-n200">
+                <th class="px-2.5 py-2.5 text-start">Client</th>
+                <th class="px-2.5 py-2.5 text-start">Phone / Session</th>
+                <th class="px-2.5 py-2.5 text-start">Carrier / Hops</th>
+                <th class="px-2.5 py-2.5 text-start whitespace-nowrap">Ours</th>
+                <th class="px-2.5 py-2.5 text-start whitespace-nowrap">AT Cost</th>
+                <th class="px-2.5 py-2.5 text-start whitespace-nowrap">Margin</th>
+                <th class="px-2.5 py-2.5 text-start">Status</th>
+                <th class="px-2.5 py-2.5 text-end whitespace-nowrap">Time</th>
             </tr>
         </thead>
         <tbody>
@@ -172,20 +170,22 @@
                     $estAt = (float) ($log->estimated_at_cost ?? 0);
                 @endphp
                 <tr class="even:bg-secondary/5">
-                    <td class="px-3 py-2.5">
-                        <div class="font-medium">{{ $log->client?->name ?? 'N/A' }}</div>
+                    <td class="px-2.5 py-2.5">
+                        <div class="font-medium leading-tight">{{ $log->client?->name ?? 'N/A' }}</div>
                         <div class="text-[11px] font-mono text-n100">{{ $log->service_code ?: '—' }}</div>
                     </td>
-                    <td class="px-3 py-2.5">
-                        <div class="font-medium">{{ $log->phone_number }}</div>
-                        <div class="text-[11px] font-mono text-n100 max-w-[140px] truncate" title="{{ $log->session_id }}">
+                    <td class="px-2.5 py-2.5">
+                        <div class="font-medium whitespace-nowrap">{{ $log->phone_number }}</div>
+                        <div class="text-[11px] font-mono text-n100 max-w-[130px] truncate" title="{{ $log->session_id }}">
                             {{ $log->session_id ?: 'no-session-id' }}
                         </div>
                     </td>
-                    <td class="px-3 py-2.5 text-xs">{{ $log->network_name ?: '—' }}</td>
-                    <td class="px-3 py-2.5 text-xs">{{ $log->hops ?? 1 }} / {{ $log->duration_ms !== null ? round($log->duration_ms / 1000) . 's' : '—' }}</td>
-                    <td class="px-3 py-2.5 font-semibold {{ $billed <= 0 ? 'text-error' : '' }}">₦{{ number_format($billed, 2) }}</td>
-                    <td class="px-3 py-2.5 text-xs">
+                    <td class="px-2.5 py-2.5 text-xs">
+                        <div class="whitespace-nowrap">{{ $log->network_name ?: '—' }}</div>
+                        <div class="text-[11px] text-n100 whitespace-nowrap">{{ $log->hops ?? 1 }} hop · {{ $log->duration_ms !== null ? round($log->duration_ms / 1000) . 's' : '—' }}</div>
+                    </td>
+                    <td class="px-2.5 py-2.5 font-semibold whitespace-nowrap {{ $billed <= 0 ? 'text-error' : '' }}">₦{{ number_format($billed, 2) }}</td>
+                    <td class="px-2.5 py-2.5 text-xs whitespace-nowrap">
                         @if ($reconciled)
                             <div class="font-semibold">₦{{ number_format($up, 2) }}</div>
                             <span class="inline-block rounded-full bg-[#10B981]/12 px-2 py-0.5 text-[10px] font-semibold text-[#10B981]">AT Verified</span>
@@ -197,24 +197,24 @@
                             </span>
                         @endif
                     </td>
-                    <td class="px-3 py-2.5 text-xs font-semibold {{ $margin >= 0 ? 'text-[#10B981]' : 'text-error' }}">
+                    <td class="px-2.5 py-2.5 text-xs font-semibold whitespace-nowrap {{ $margin >= 0 ? 'text-[#10B981]' : 'text-error' }}">
                         ₦{{ number_format($margin, 2) }}
                     </td>
-                    <td class="px-3 py-2.5 text-xs">
-                        <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $stClass }}">
+                    <td class="px-2.5 py-2.5 text-xs">
+                        <span class="inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap {{ $stClass }}">
                             {{ $log->status ?: 'Success' }}
                         </span>
                         @if ($log->gateway_error)
-                            <div class="text-[11px] text-error max-w-[170px] truncate mt-0.5" title="{{ $log->gateway_error }}">
+                            <div class="text-[11px] text-error max-w-[155px] leading-snug mt-0.5 break-words">
                                 {{ $log->gateway_error }}
                             </div>
                         @endif
                     </td>
-                    <td class="px-3 py-2.5 text-xs text-n100">{{ optional($log->created_at)->format('M d, H:i') }}</td>
-                    <td class="px-3 py-2.5 text-end">
+                    <td class="px-2.5 py-2.5 text-end text-xs whitespace-nowrap">
+                        <div class="text-n100">{{ optional($log->created_at)->format('M d, H:i') }}</div>
                         @if (! $reconciled || $billed <= 0)
                             <button type="button"
-                                class="btn-outline py-1 px-2.5 text-[11px] js-open-reconcile"
+                                class="btn-outline py-0.5 px-2 mt-1 text-[10px] js-open-reconcile"
                                 data-action="{{ route('admin.logs.reconcile-single', $log) }}"
                                 data-session="{{ $log->session_id ?: ('Log #' . $log->id) }}"
                                 data-phone="{{ $log->phone_number }}"
@@ -223,13 +223,11 @@
                                 data-duration="{{ $log->duration_ms !== null ? (int) round($log->duration_ms / 1000) : '' }}">
                                 Reconcile
                             </button>
-                        @else
-                            <span class="text-[11px] text-n100">Synced</span>
                         @endif
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="10" class="px-4 py-6 text-center text-n100">No USSD sessions matched your filter.</td></tr>
+                <tr><td colspan="8" class="px-4 py-6 text-center text-n100">No USSD sessions matched your filter.</td></tr>
             @endforelse
         </tbody>
     </table>

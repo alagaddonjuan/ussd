@@ -127,8 +127,84 @@ class AdminController extends Controller
 
         $tiers = PricingTier::query()->orderBy('tier_name')->get();
         $perfexConfigured = $perfex->isConfigured();
+        $perfexUrl = rtrim((string) config('services.perfex.url'), '/');
 
-        return view('admin.clients', compact('clients', 'tiers', 'search', 'perfexConfigured'));
+        return view('admin.clients', compact('clients', 'tiers', 'search', 'perfexConfigured', 'perfexUrl'));
+    }
+
+    public function perfexInvoices(Request $request, PerfexCrmService $perfex): JsonResponse
+    {
+        $clientId = $request->query('perfex_client_id') ? (int) $request->query('perfex_client_id') : null;
+        $invoicesRes = $perfex->fetchInvoices($clientId);
+        $customersRes = $perfex->fetchCustomers();
+
+        return response()->json([
+            'ok' => $invoicesRes['ok'] || $customersRes['ok'],
+            'invoices_ok' => $invoicesRes['ok'],
+            'invoices' => $invoicesRes['invoices'],
+            'invoices_message' => $invoicesRes['message'],
+            'customers_ok' => $customersRes['ok'],
+            'customers' => array_slice($customersRes['customers'], 0, 50),
+            'customers_message' => $customersRes['message'],
+        ]);
+    }
+
+    public function destroyClient(Request $request, Client $client): RedirectResponse
+    {
+        if ($client->isAdmin() || (int) $client->id === (int) $request->user()?->id) {
+            return back()->withErrors(['client' => 'Admin and active session accounts cannot be deleted.']);
+        }
+
+        $label = "{$client->name} ({$client->email})";
+        $this->deleteSingleClient($client);
+        $this->recordAudit($request, 'client.deleted', "Deleted client {$label}");
+
+        return back()->with('status', "Deleted client {$label} and all associated records.");
+    }
+
+    public function bulkDestroyClients(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'client_ids' => ['required', 'array', 'min:1'],
+            'client_ids.*' => ['integer', 'exists:clients,id'],
+        ]);
+
+        $actorId = (int) $request->user()?->id;
+        $targets = Client::query()
+            ->whereIn('id', $data['client_ids'])
+            ->where('id', '!=', $actorId)
+            ->where(fn ($q) => $q->where('is_admin', false)->orWhereNull('is_admin'))
+            ->get();
+
+        if ($targets->isEmpty()) {
+            return back()->withErrors(['client' => 'No deletable non-admin clients were selected.']);
+        }
+
+        $deletedNames = [];
+        foreach ($targets as $target) {
+            $deletedNames[] = $target->name;
+            $this->deleteSingleClient($target);
+        }
+
+        $this->recordAudit(
+            $request,
+            'client.bulk_deleted',
+            'Bulk deleted '.count($deletedNames).' client(s): '.implode(', ', array_slice($deletedNames, 0, 15))
+        );
+
+        return back()->with('status', 'Deleted '.count($deletedNames).' selected test client(s) successfully.');
+    }
+
+    protected function deleteSingleClient(Client $client): void
+    {
+        if ($client->kyc_document_path && Storage::disk('local')->exists($client->kyc_document_path)) {
+            Storage::disk('local')->delete($client->kyc_document_path);
+        }
+
+        DB::transaction(function () use ($client): void {
+            $client->transactions()->delete();
+            $client->delete();
+        });
     }
 
     public function updateClient(Request $request, Client $client): RedirectResponse
@@ -510,7 +586,7 @@ class AdminController extends Controller
             ->when($dateFrom !== '', fn ($q) => $q->where('created_at', '>=', "{$dateFrom} 00:00:00"))
             ->when($dateTo !== '', fn ($q) => $q->where('created_at', '<=', "{$dateTo} 23:59:59"));
 
-        $filteredSummaryQuery = clone $ussdBaseQuery;
+        $filteredSummaryQuery = (clone $ussdBaseQuery)->setEagerLoads([]);
         $this->applyUssdStatusFilter($ussdBaseQuery, $statusFilter);
 
         $ussdLogs = (clone $ussdBaseQuery)

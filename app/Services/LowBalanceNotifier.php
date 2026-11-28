@@ -24,9 +24,11 @@ class LowBalanceNotifier
             return;
         }
 
+        // Stamp cooldown before sending so a failing mail server never blocks every USSD hop.
+        $client->update(['low_balance_notified_at' => now()]);
+
         try {
             Mail::to($client->email)->send(new LowBalanceAlertMail($client, $threshold));
-            $client->update(['low_balance_notified_at' => now()]);
         } catch (\Throwable $e) {
             Log::warning('Failed sending low balance alert', [
                 'client_id' => $client->id,

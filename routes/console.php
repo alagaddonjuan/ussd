@@ -38,8 +38,12 @@ Artisan::command('q4:health-check {--threshold=5 : Minimum failed webhooks in 60
     $count = $failures->count();
     $adminEmail = (string) config('services.alerts.admin_email');
     if ($count >= $threshold && $adminEmail !== '') {
-        Mail::to($adminEmail)->send(new GatewayAlertMail($count, $windowMinutes, $failures->first()?->outcome));
-        $this->warn("Gateway anomaly alert sent to {$adminEmail} ({$count} errors).");
+        try {
+            Mail::to($adminEmail)->send(new GatewayAlertMail($count, $windowMinutes, $failures->first()?->outcome));
+            $this->warn("Gateway anomaly alert sent to {$adminEmail} ({$count} errors).");
+        } catch (\Throwable $e) {
+            $this->warn("Gateway anomaly detected ({$count} errors), but alert email failed: {$e->getMessage()}");
+        }
 
         return;
     }

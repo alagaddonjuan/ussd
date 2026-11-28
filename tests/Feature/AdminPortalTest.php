@@ -6,6 +6,7 @@ use App\Mail\AnnouncementMail;
 use App\Mail\GatewayAlertMail;
 use App\Models\Client;
 use App\Models\PricingTier;
+use App\Models\Transaction;
 use App\Models\UssdLog;
 use App\Models\WebhookLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -301,5 +302,112 @@ class AdminPortalTest extends TestCase
         ])->assertSessionHas('status');
         $client->refresh();
         $this->assertEquals(350.00, $client->token_balance);
+    }
+
+    public function test_admin_can_delete_test_clients_and_fetch_perfex_invoices(): void
+    {
+        $admin = Client::create([
+            'name' => 'Super Admin',
+            'email' => 'admin-del@example.com',
+            'password' => Hash::make('Password123!'),
+            'is_admin' => true,
+            'status' => 'active',
+        ]);
+
+        $modernLottery = Client::create([
+            'name' => 'Modern Lottery',
+            'email' => 'ml-keep@example.com',
+            'password' => Hash::make('Password123!'),
+            'ussd_code' => '*347*102#',
+            'status' => 'active',
+            'perfex_client_id' => 12,
+        ]);
+
+        $testA = Client::create([
+            'name' => 'Test Staff A',
+            'email' => 'test-a@example.com',
+            'password' => Hash::make('Password123!'),
+            'status' => 'active',
+        ]);
+
+        $testB = Client::create([
+            'name' => 'Test Client B',
+            'email' => 'test-b@example.com',
+            'password' => Hash::make('Password123!'),
+            'status' => 'pending',
+        ]);
+
+        $testC = Client::create([
+            'name' => 'Test Client C',
+            'email' => 'test-c@example.com',
+            'password' => Hash::make('Password123!'),
+            'status' => 'active',
+        ]);
+
+        Transaction::create([
+            'client_id' => $testA->id,
+            'type' => 'credit',
+            'reference' => 'TEST-TX-A',
+            'amount' => 100,
+            'tokens_purchased' => 100,
+            'status' => 'success',
+            'gateway' => 'admin_manual',
+        ]);
+
+        // Cannot delete admin
+        $this->actingAs($admin)->delete("/admin/clients/{$admin->id}")
+            ->assertSessionHasErrors('client');
+        $this->assertDatabaseHas('clients', ['id' => $admin->id]);
+
+        // Single delete removes test client and its transactions
+        $this->actingAs($admin)->delete("/admin/clients/{$testA->id}")
+            ->assertSessionHas('status');
+        $this->assertDatabaseMissing('clients', ['id' => $testA->id]);
+        $this->assertDatabaseMissing('transactions', ['reference' => 'TEST-TX-A']);
+
+        // Bulk delete removes testB & testC while preserving admin (even if submitted) and Modern Lottery
+        $this->actingAs($admin)->post('/admin/clients/bulk-delete', [
+            'client_ids' => [$admin->id, $testB->id, $testC->id],
+        ])->assertSessionHas('status');
+
+        $this->assertDatabaseMissing('clients', ['id' => $testB->id]);
+        $this->assertDatabaseMissing('clients', ['id' => $testC->id]);
+        $this->assertDatabaseHas('clients', ['id' => $admin->id]);
+        $this->assertDatabaseHas('clients', ['id' => $modernLottery->id]);
+
+        // Perfex CRM invoice & customer listing endpoint
+        config([
+            'services.perfex.url' => 'https://crm.q4iltd.com',
+            'services.perfex.api_token' => 'perfex_token_123',
+        ]);
+        Http::fake([
+            'crm.q4iltd.com/api/invoices' => Http::response([
+                [
+                    'id' => 55,
+                    'prefix' => 'INV-',
+                    'number' => '000055',
+                    'clientid' => 12,
+                    'company' => 'Modern Lottery',
+                    'date' => '2026-11-27',
+                    'duedate' => '2026-12-04',
+                    'total' => '159500.00',
+                    'status' => '1',
+                ],
+            ], 200),
+            'crm.q4iltd.com/api/customers' => Http::response([
+                ['userid' => 12, 'company' => 'Modern Lottery'],
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)->getJson('/admin/perfex/invoices')
+            ->assertOk()
+            ->assertJson([
+                'ok' => true,
+                'invoices_ok' => true,
+                'customers_ok' => true,
+            ])
+            ->assertJsonPath('invoices.0.number', 'INV-000055')
+            ->assertJsonPath('invoices.0.status', 'Unpaid')
+            ->assertJsonPath('customers.0.userid', 12);
     }
 }

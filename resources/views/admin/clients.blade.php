@@ -6,7 +6,7 @@
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4 lg:mb-8">
         <div>
             <h2 class="h2">Clients, Maintenance &amp; KYC</h2>
-            <p class="text-sm text-n100 mt-1">Assign USSD shortcodes, tiers, KYC status, monthly maintenance fees (₦159,500), and manual credits/debits.</p>
+            <p class="text-sm text-n100 mt-1">Assign USSD shortcodes, tiers, KYC status, monthly maintenance fees (₦159,500), Perfex CRM sync, and cleanup test clients.</p>
         </div>
         <div class="flex flex-wrap gap-2">
             <form method="GET" action="{{ route('admin.clients') }}" class="flex gap-2">
@@ -23,34 +23,118 @@
         </div>
     </div>
 
+    <!-- Perfex CRM Integration & Invoices Panel -->
+    <div class="box border border-n30 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <h5 class="h5">Perfex CRM Invoices ({{ $perfexUrl }})</h5>
+                    @if ($perfexConfigured)
+                        <span class="rounded-full bg-[#10B981]/15 px-2.5 py-0.5 text-xs font-semibold text-[#10B981]">Token Configured</span>
+                    @else
+                        <span class="rounded-full bg-[#F59E0B]/15 px-2.5 py-0.5 text-xs font-semibold text-[#F59E0B]">PERFEX_API_TOKEN Not Set</span>
+                    @endif
+                </div>
+                <p class="text-xs text-n100 mt-1">
+                    @if ($perfexConfigured)
+                        Load existing invoices &amp; customer IDs from Perfex CRM, or click <strong>Sync Perfex Invoice</strong> on any client below.
+                    @else
+                        In Perfex CRM (<code>{{ $perfexUrl }}</code>) &rarr; <strong>API / Rest API &rarr; API Management</strong>, create a token with Customers &amp; Invoices permissions, then add <code>PERFEX_API_TOKEN=your_token</code> to <code>.env</code> and run <code>php artisan optimize:clear</code>.
+                    @endif
+                </p>
+            </div>
+            <button type="button" id="load-perfex-invoices-btn" class="btn-primary py-2 px-4 text-xs">
+                <i class="las la-file-invoice"></i>
+                <span>Test &amp; Load Perfex Invoices</span>
+            </button>
+        </div>
+
+        <div id="perfex-invoices-panel" class="hidden mt-4 border-t border-n30 pt-4 space-y-4">
+            <div id="perfex-status-banner" class="rounded-xl px-4 py-2.5 text-xs font-medium"></div>
+            <div id="perfex-customers-strip" class="hidden text-xs">
+                <span class="font-semibold text-n200">Perfex Customers (ID &rarr; Company):</span>
+                <div id="perfex-customers-list" class="mt-1.5 flex flex-wrap gap-1.5"></div>
+            </div>
+            <div id="perfex-invoices-table-wrap" class="hidden overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="bg-secondary/5">
+                            <th class="px-3 py-2 text-start">Invoice #</th>
+                            <th class="px-3 py-2 text-start">Customer</th>
+                            <th class="px-3 py-2 text-start">Date</th>
+                            <th class="px-3 py-2 text-start">Due Date</th>
+                            <th class="px-3 py-2 text-start">Total</th>
+                            <th class="px-3 py-2 text-start">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="perfex-invoices-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Delete Toolbar for Test Clients -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-n30 bg-n0 px-4 py-3">
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+            <label class="inline-flex items-center gap-2 font-semibold cursor-pointer">
+                <input type="checkbox" id="select-all-deletable-clients" />
+                <span>Select All Non-Admin Clients on Page</span>
+            </label>
+            <button type="button" id="select-non-lottery-btn" class="btn-outline py-1 px-3 text-xs">
+                Select All Except Modern Lottery
+            </button>
+        </div>
+        <form method="POST" action="{{ route('admin.clients.bulk-delete') }}" id="bulk-delete-clients-form"
+            onsubmit="return confirm('Permanently delete the selected test client(s) and all their menus, logs, API keys, and transactions? This cannot be undone.')">
+            @csrf
+            <div id="bulk-delete-hidden-inputs"></div>
+            <button type="submit" id="bulk-delete-clients-btn" disabled
+                class="btn-error py-1.5 px-4 text-xs opacity-50 cursor-not-allowed">
+                <i class="las la-trash-alt"></i> Delete Selected (<span id="selected-clients-count">0</span>)
+            </button>
+        </form>
+    </div>
+
     <div class="space-y-4">
         @forelse ($clients as $c)
+            @php
+                $isProtected = $c->isAdmin() || (int) $c->id === (int) auth()->id();
+            @endphp
             <div class="box border border-n30">
                 <div class="flex flex-wrap items-center justify-between gap-3 bb-dashed pb-3 mb-4">
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h5 class="h5">{{ $c->name }}</h5>
-                            @if ($c->is_admin)
-                                <span class="rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary">Admin</span>
-                            @endif
-                            <span class="rounded-full px-2.5 py-0.5 text-xs font-medium {{ $c->status === 'active' ? 'bg-[#10B981]/15 text-[#10B981]' : 'bg-error/10 text-error' }}">
-                                {{ ucfirst($c->status) }}
-                            </span>
-                            <span class="rounded-full px-2.5 py-0.5 text-xs font-medium {{ ($c->kyc_status ?? 'unverified') === 'approved' ? 'bg-primary/15 text-primary' : 'bg-warning/15 text-warning' }}">
-                                KYC: {{ ucfirst($c->kyc_status ?? 'unverified') }}
-                            </span>
+                    <div class="flex items-start gap-3">
+                        @if (! $isProtected)
+                            <input type="checkbox"
+                                class="mt-1.5 js-client-select"
+                                value="{{ $c->id }}"
+                                data-client-name="{{ strtolower($c->name) }}"
+                                aria-label="Select {{ $c->name }}" />
+                        @endif
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h5 class="h5">{{ $c->name }}</h5>
+                                @if ($c->is_admin)
+                                    <span class="rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary">Admin</span>
+                                @endif
+                                <span class="rounded-full px-2.5 py-0.5 text-xs font-medium {{ $c->status === 'active' ? 'bg-[#10B981]/15 text-[#10B981]' : 'bg-error/10 text-error' }}">
+                                    {{ ucfirst($c->status) }}
+                                </span>
+                                <span class="rounded-full px-2.5 py-0.5 text-xs font-medium {{ ($c->kyc_status ?? 'unverified') === 'approved' ? 'bg-primary/15 text-primary' : 'bg-warning/15 text-warning' }}">
+                                    KYC: {{ ucfirst($c->kyc_status ?? 'unverified') }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-n100 mt-0.5">
+                                {{ $c->email }} &bull;
+                                Balance: <strong class="text-primary">₦{{ number_format((float) $c->token_balance, 2) }}</strong> &bull;
+                                Maint: ₦{{ number_format((float) ($c->monthly_maintenance_fee ?? 159500), 2) }}
+                                @if ($c->last_maintenance_billed_at)
+                                    (Last: {{ $c->last_maintenance_billed_at->format('M d') }})
+                                @endif
+                                @if ($c->perfex_client_id)
+                                    &bull; Perfex #{{ $c->perfex_client_id }}
+                                @endif
+                            </p>
                         </div>
-                        <p class="text-xs text-n100 mt-0.5">
-                            {{ $c->email }} &bull;
-                            Balance: <strong class="text-primary">₦{{ number_format((float) $c->token_balance, 2) }}</strong> &bull;
-                            Maint: ₦{{ number_format((float) ($c->monthly_maintenance_fee ?? 159500), 2) }}
-                            @if ($c->last_maintenance_billed_at)
-                                (Last: {{ $c->last_maintenance_billed_at->format('M d') }})
-                            @endif
-                            @if ($c->perfex_client_id)
-                                &bull; Perfex #{{ $c->perfex_client_id }}
-                            @endif
-                        </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         @if ($c->kyc_document_path)
@@ -61,10 +145,20 @@
                         <form method="POST" action="{{ route('admin.clients.perfex-invoice', $c) }}">
                             @csrf
                             <button type="submit" class="btn-secondary py-1.5 px-3 text-xs"
-                                title="{{ $perfexConfigured ? 'Create invoice in crm.q4iltd.com' : 'Configure PERFEX_API_TOKEN in .env first' }}">
+                                title="{{ $perfexConfigured ? 'Create invoice in ' . $perfexUrl : 'Configure PERFEX_API_TOKEN in .env first' }}">
                                 <i class="las la-file-invoice"></i> Sync Perfex Invoice
                             </button>
                         </form>
+                        @if (! $isProtected)
+                            <form method="POST" action="{{ route('admin.clients.destroy', $c) }}"
+                                onsubmit="return confirm('Permanently delete {{ addslashes($c->name) }} ({{ addslashes($c->email) }}) and all their menus, logs, API keys, and transactions?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-error py-1.5 px-3 text-xs">
+                                    <i class="las la-trash-alt"></i> Delete
+                                </button>
+                            </form>
+                        @endif
                     </div>
                 </div>
 
@@ -161,3 +255,127 @@
     </div>
 </div>
 @endsection
+
+@push('page-js')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const checkboxes = Array.from(document.querySelectorAll('.js-client-select'));
+    const selectAll = document.getElementById('select-all-deletable-clients');
+    const selectNonLotteryBtn = document.getElementById('select-non-lottery-btn');
+    const bulkBtn = document.getElementById('bulk-delete-clients-btn');
+    const countSpan = document.getElementById('selected-clients-count');
+    const hiddenWrap = document.getElementById('bulk-delete-hidden-inputs');
+
+    function syncBulkSelection() {
+        const selected = checkboxes.filter((cb) => cb.checked);
+        if (countSpan) countSpan.textContent = String(selected.length);
+        if (hiddenWrap) {
+            hiddenWrap.innerHTML = '';
+            selected.forEach((cb) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'client_ids[]';
+                input.value = cb.value;
+                hiddenWrap.appendChild(input);
+            });
+        }
+        if (bulkBtn) {
+            const disabled = selected.length === 0;
+            bulkBtn.disabled = disabled;
+            bulkBtn.classList.toggle('opacity-50', disabled);
+            bulkBtn.classList.toggle('cursor-not-allowed', disabled);
+        }
+        if (selectAll && checkboxes.length > 0) {
+            selectAll.checked = selected.length === checkboxes.length;
+        }
+    }
+
+    checkboxes.forEach((cb) => cb.addEventListener('change', syncBulkSelection));
+
+    selectAll && selectAll.addEventListener('change', () => {
+        checkboxes.forEach((cb) => { cb.checked = selectAll.checked; });
+        syncBulkSelection();
+    });
+
+    selectNonLotteryBtn && selectNonLotteryBtn.addEventListener('click', () => {
+        checkboxes.forEach((cb) => {
+            const name = cb.dataset.clientName || '';
+            cb.checked = !name.includes('modern lottery');
+        });
+        syncBulkSelection();
+    });
+
+    // Perfex CRM Invoice Loader
+    const loadPerfexBtn = document.getElementById('load-perfex-invoices-btn');
+    const panel = document.getElementById('perfex-invoices-panel');
+    const banner = document.getElementById('perfex-status-banner');
+    const customersStrip = document.getElementById('perfex-customers-strip');
+    const customersList = document.getElementById('perfex-customers-list');
+    const tableWrap = document.getElementById('perfex-invoices-table-wrap');
+    const tbody = document.getElementById('perfex-invoices-tbody');
+
+    function esc(str) {
+        const div = document.createElement('div');
+        div.textContent = str == null ? '' : String(str);
+        return div.innerHTML;
+    }
+
+    loadPerfexBtn && loadPerfexBtn.addEventListener('click', async () => {
+        panel && panel.classList.remove('hidden');
+        if (banner) {
+            banner.className = 'rounded-xl bg-primary/10 text-primary px-4 py-2.5 text-xs font-medium';
+            banner.textContent = 'Connecting to Perfex CRM...';
+        }
+        try {
+            const res = await fetch(@json(route('admin.perfex.invoices')), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            });
+            const data = await res.json();
+
+            if (banner) {
+                if (data.invoices_ok) {
+                    banner.className = 'rounded-xl bg-[#10B981]/15 text-[#10B981] px-4 py-2.5 text-xs font-medium';
+                    banner.textContent = data.invoices_message + ' (' + (data.customers_message || '') + ')';
+                } else {
+                    banner.className = 'rounded-xl bg-error/15 text-error px-4 py-2.5 text-xs font-medium';
+                    banner.textContent = data.invoices_message || data.customers_message || 'Failed to connect to Perfex CRM.';
+                }
+            }
+
+            if (customersStrip && customersList && Array.isArray(data.customers) && data.customers.length > 0) {
+                customersStrip.classList.remove('hidden');
+                customersList.innerHTML = data.customers.map((c) => {
+                    const id = c.userid || c.id || '';
+                    const name = c.company || c.name || 'Customer';
+                    return `<span class="rounded-full border border-n30 bg-primary/5 px-2.5 py-0.5 font-mono">#${esc(id)} ${esc(name)}</span>`;
+                }).join('');
+            }
+
+            if (tableWrap && tbody) {
+                if (Array.isArray(data.invoices) && data.invoices.length > 0) {
+                    tableWrap.classList.remove('hidden');
+                    tbody.innerHTML = data.invoices.map((inv) => `
+                        <tr class="even:bg-secondary/5">
+                            <td class="px-3 py-2 font-semibold">${esc(inv.number)}</td>
+                            <td class="px-3 py-2">${esc(inv.company)}</td>
+                            <td class="px-3 py-2 text-n100">${esc(inv.date)}</td>
+                            <td class="px-3 py-2 text-n100">${esc(inv.duedate)}</td>
+                            <td class="px-3 py-2 font-semibold">${Number(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td class="px-3 py-2">${esc(inv.status)}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tableWrap.classList.add('hidden');
+                }
+            }
+        } catch (err) {
+            if (banner) {
+                banner.className = 'rounded-xl bg-error/15 text-error px-4 py-2.5 text-xs font-medium';
+                banner.textContent = 'Request failed while checking Perfex CRM.';
+            }
+        }
+    });
+});
+</script>
+@endpush
