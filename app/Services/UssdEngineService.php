@@ -314,6 +314,18 @@ class UssdEngineService
                         ? $status
                         : ($errorMessage !== '' ? 'Failed' : ($lastLog->status && $lastLog->status !== 'In Progress' ? $lastLog->status : 'Success'));
 
+                    $trace = is_array($lastLog->hops_trace) ? $lastLog->hops_trace : [];
+                    if (! empty($trace)) {
+                        $lastIdx = array_key_last($trace);
+                        $trace[$lastIdx]['status'] = $resolvedStatus;
+                        if ($errorMessage !== '') {
+                            $trace[$lastIdx]['error_message'] = $errorMessage;
+                        }
+                        if ($lastAppResponse !== '') {
+                            $trace[$lastIdx]['app_response'] = $lastAppResponse;
+                        }
+                    }
+
                     $lastLog->update([
                         'cost' => $finalCost,
                         'client_price' => $finalClientPrice,
@@ -325,6 +337,7 @@ class UssdEngineService
                         'status' => $resolvedStatus,
                         'gateway_error' => $errorMessage !== '' ? $errorMessage : $lastLog->gateway_error,
                         'last_app_response' => $lastAppResponse !== '' ? $lastAppResponse : $lastLog->last_app_response,
+                        'hops_trace' => ! empty($trace) ? array_values($trace) : $lastLog->hops_trace,
                         'reconciled_at' => now(),
                     ]);
 
@@ -512,6 +525,16 @@ class UssdEngineService
                         $newCost = round((float) $existing->cost + $realCost, 2);
                         $newClientPrice = round((float) ($existing->client_price ?? $existing->cost) + $realCost, 2);
 
+                        $trace = is_array($existing->hops_trace) ? $existing->hops_trace : [];
+                        $trace[] = [
+                            'hop' => count($trace) + 1,
+                            'display_time' => now()->format('M d, Y g:i A'),
+                            'input' => $rawText === '' ? 'Dialed '.($serviceCode ?: 'USSD') : $rawText,
+                            'app_response' => $lastAppResponse ?: '—',
+                            'error_message' => $gatewayError ?: null,
+                            'status' => $initialStatus,
+                        ];
+
                         $existing->update([
                             'phone_number' => $phoneNumber !== '' ? $phoneNumber : $existing->phone_number,
                             'service_code' => $serviceCode !== '' ? $serviceCode : $existing->service_code,
@@ -525,6 +548,7 @@ class UssdEngineService
                             'status' => $existing->reconciled_at ? $existing->status : $initialStatus,
                             'gateway_error' => $gatewayError ?: $existing->gateway_error,
                             'last_app_response' => $lastAppResponse ?: $existing->last_app_response,
+                            'hops_trace' => $trace,
                             'logged_at' => now(),
                             'reconciled_at' => $atCost !== null ? now() : $existing->reconciled_at,
                         ]);
@@ -532,6 +556,15 @@ class UssdEngineService
                         return;
                     }
                 }
+
+                $initialTrace = [[
+                    'hop' => 1,
+                    'display_time' => now()->format('M d, Y g:i A'),
+                    'input' => $rawText === '' ? 'Dialed '.($serviceCode ?: 'USSD') : $rawText,
+                    'app_response' => $lastAppResponse ?: '—',
+                    'error_message' => $gatewayError ?: null,
+                    'status' => $initialStatus,
+                ]];
 
                 UssdLog::create([
                     'client_id' => $client->id,
@@ -548,6 +581,7 @@ class UssdEngineService
                     'status' => $initialStatus,
                     'gateway_error' => $gatewayError,
                     'last_app_response' => $lastAppResponse,
+                    'hops_trace' => $initialTrace,
                     'created_at' => now(),
                     'logged_at' => now(),
                     'reconciled_at' => $atCost !== null ? now() : null,

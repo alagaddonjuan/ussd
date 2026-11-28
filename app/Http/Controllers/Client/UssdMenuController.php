@@ -56,6 +56,30 @@ class UssdMenuController extends Controller
         ]);
     }
 
+    public function showLogDetails(Request $request, UssdLog $ussdLog): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user->isAdmin() && (int) $ussdLog->client_id !== (int) $user->id) {
+            abort(403, 'You do not have permission to view this USSD session.');
+        }
+
+        return response()->json([
+            'id' => $ussdLog->id,
+            'is_admin' => false,
+            'date' => optional($ussdLog->created_at)->format('F j, Y g:i A') ?: '—',
+            'service_code' => $ussdLog->service_code ?: '—',
+            'phone_number' => $ussdLog->phone_number ?: '—',
+            'carrier' => $ussdLog->network_name ?: '—',
+            'hops' => (int) ($ussdLog->hops ?? 1),
+            'duration' => $ussdLog->duration_ms !== null ? round($ussdLog->duration_ms / 1000).'s' : '—',
+            'status' => $ussdLog->status ?: 'Success',
+            'session_id' => $ussdLog->session_id ?: '—',
+            'billed' => '₦'.number_format($ussdLog->effectiveBilled(), 2),
+            'gateway_error' => $ussdLog->gateway_error ?: 'None',
+            'hops_trace' => $ussdLog->normalizedHopsTrace(),
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([

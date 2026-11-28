@@ -21,7 +21,15 @@
                 {{ ucfirst($log->status ?: 'Success') }}
             </span>
         </td>
+        <td class="px-4 py-2.5 text-end">
+            <button type="button"
+                class="btn-outline py-1 px-2.5 text-xs js-view-ussd-details"
+                data-details-url="{{ route('ussd.logs.details', $log) }}"
+                title="View session details and hops">
+                <i class="las la-ellipsis-h"></i>
+            </button>
+        </td>
     </tr>
 @empty
-    <tr><td colspan="9" class="px-4 py-6 text-center text-n100">No USSD logs recorded yet.</td></tr>
+    <tr><td colspan="10" class="px-4 py-6 text-center text-n100">No USSD logs recorded yet.</td></tr>
 @endforelse

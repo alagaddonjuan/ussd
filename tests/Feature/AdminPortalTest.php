@@ -410,4 +410,145 @@ class AdminPortalTest extends TestCase
             ->assertJsonPath('invoices.0.status', 'Unpaid')
             ->assertJsonPath('customers.0.userid', 12);
     }
+
+    public function test_admin_can_view_ussd_log_details_and_perfex_falls_back_to_q4i_api_bridge(): void
+    {
+        $admin = Client::create([
+            'name' => 'Admin Q4',
+            'email' => 'admin-q4-bridge@example.com',
+            'password' => Hash::make('Password123!'),
+            'is_admin' => true,
+            'status' => 'active',
+        ]);
+
+        $client = Client::create([
+            'name' => 'Modern Lottery Ltd',
+            'email' => 'lottery-bridge@example.com',
+            'password' => Hash::make('Password123!'),
+            'ussd_code' => '*347*888#',
+            'token_balance' => 1000,
+            'monthly_maintenance_fee' => 159500,
+            'status' => 'active',
+        ]);
+
+        $log = \App\Models\UssdLog::create([
+            'client_id' => $client->id,
+            'phone_number' => '+2348099998888',
+            'session_id' => 'ATUid_admin_detail_1',
+            'service_code' => '*347*888#',
+            'network_name' => 'MTN Nigeria',
+            'hops' => 2,
+            'duration_ms' => 14000,
+            'cost' => 30.00,
+            'client_price' => 30.00,
+            'upstream_cost' => 7.50,
+            'status' => 'Success',
+            'hops_trace' => [
+                [
+                    'hop' => 1,
+                    'display_time' => '2026-11-28 02:00:00',
+                    'input' => 'Dialed *347*888#',
+                    'app_response' => 'CON Main Menu',
+                    'error_message' => null,
+                    'status' => 'In Progress',
+                ],
+                [
+                    'hop' => 2,
+                    'display_time' => '2026-11-28 02:00:14',
+                    'input' => '1',
+                    'app_response' => 'END Done',
+                    'error_message' => null,
+                    'status' => 'Success',
+                ],
+            ],
+            'created_at' => now(),
+            'reconciled_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->getJson("/admin/logs/{$log->id}/details")
+            ->assertOk()
+            ->assertJson([
+                'id' => $log->id,
+                'is_admin' => true,
+                'client_name' => 'Modern Lottery Ltd',
+                'session_id' => 'ATUid_admin_detail_1',
+                'billed' => '₦30.00',
+                'upstream' => '₦7.50',
+                'margin' => '₦22.50',
+                'reconciled' => true,
+            ])
+            ->assertJsonCount(2, 'hops_trace');
+
+        // Perfex CRM without PERFEX_API_PREFIX set falls back on 404 from /api/* to /q4i_api/api/*
+        config([
+            'services.perfex.url' => 'https://crm.q4iltd.com',
+            'services.perfex.api_token' => 'q4i_bridge_token',
+            'services.perfex.api_prefix' => '',
+        ]);
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            $url = $request->url();
+
+            if (str_contains($url, 'crm.q4iltd.com/api/')) {
+                return Http::response('404 Page Not Found', 404);
+            }
+
+            if (str_contains($url, 'crm.q4iltd.com/q4i_api/api/contacts_search/')) {
+                return Http::response([
+                    ['userid' => 42, 'company' => 'Modern Lottery Ltd', 'email' => 'lottery-bridge@example.com'],
+                ], 200);
+            }
+
+            if (str_contains($url, 'crm.q4iltd.com/q4i_api/api/customers')) {
+                return Http::response([
+                    ['userid' => 42, 'company' => 'Modern Lottery Ltd', 'active' => '1'],
+                ], 200);
+            }
+
+            if (str_contains($url, 'crm.q4iltd.com/q4i_api/api/invoices')) {
+                if (strtoupper($request->method()) === 'POST') {
+                    return Http::response([
+                        'status' => true,
+                        'id' => 901,
+                        'message' => 'Invoice added successfully.',
+                    ], 200);
+                }
+
+                return Http::response([
+                    [
+                        'id' => 901,
+                        'prefix' => 'INV-',
+                        'number' => '000901',
+                        'clientid' => 42,
+                        'company' => 'Modern Lottery Ltd',
+                        'total' => '159500.00',
+                        'status' => 1,
+                        'date' => '2026-11-28',
+                        'duedate' => '2026-12-05',
+                        'hash' => 'q4ihash901',
+                    ],
+                ], 200);
+            }
+
+            return Http::response([], 404);
+        });
+
+        $this->actingAs($admin)->getJson('/admin/perfex/invoices')
+            ->assertOk()
+            ->assertJson([
+                'ok' => true,
+                'invoices_ok' => true,
+                'customers_ok' => true,
+            ])
+            ->assertJsonPath('invoices.0.number', 'INV-000901')
+            ->assertJsonPath('customers.0.userid', 42);
+
+        $this->actingAs($admin)->post("/admin/clients/{$client->id}/perfex-invoice")
+            ->assertSessionHas('status');
+
+        $this->assertSame(42, (int) $client->fresh()->perfex_client_id);
+
+        Http::assertSent(fn (\Illuminate\Http\Client\Request $request) => str_contains($request->url(), 'crm.q4iltd.com/q4i_api/api/contacts_search/'));
+        Http::assertSent(fn (\Illuminate\Http\Client\Request $request) => $request->method() === 'POST' && str_contains($request->url(), 'crm.q4iltd.com/q4i_api/api/invoices'));
+    }
 }

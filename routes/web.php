@@ -73,6 +73,7 @@ Route::middleware(['auth', 'active.client'])->group(function () {
     // USSD Menus & Tree Builder
     Route::get('/ussd-menus', [UssdMenuController::class, 'index'])->name('ussd.menus.index');
     Route::get('/ussd-menus/logs/live', [UssdMenuController::class, 'liveLogs'])->name('ussd.logs.live');
+    Route::get('/ussd-menus/logs/{ussdLog}', [UssdMenuController::class, 'showLogDetails'])->name('ussd.logs.details');
     Route::post('/ussd-menus', [UssdMenuController::class, 'store'])->name('ussd.menus.store');
     Route::get('/ussd-menus/{menu}', [UssdMenuController::class, 'show'])->name('ussd.menus.show');
     Route::post('/ussd-menus/{menu}/activate', [UssdMenuController::class, 'setActive'])->name('ussd.menus.activate');
@@ -138,6 +139,7 @@ Route::middleware(['auth', 'active.client'])->group(function () {
         Route::get('/logs', [AdminController::class, 'logs'])->name('logs');
         Route::get('/logs/live', [AdminController::class, 'liveLogs'])->name('logs.live');
         Route::get('/logs/at-balance', [AdminController::class, 'atBalance'])->name('logs.at-balance');
+        Route::get('/logs/{ussdLog}/details', [AdminController::class, 'ussdLogDetails'])->name('logs.details');
         Route::post('/logs/reconcile', [AdminController::class, 'reconcileAtCsv'])->name('logs.reconcile');
         Route::post('/logs/{ussdLog}/reconcile', [AdminController::class, 'reconcileSingleUssdLog'])->name('logs.reconcile-single');
         Route::post('/webhooks/{webhookLog}/replay', [AdminController::class, 'replayWebhook'])->name('webhooks.replay');

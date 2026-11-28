@@ -39,7 +39,7 @@
                     @if ($perfexConfigured)
                         Load existing invoices &amp; customer IDs from Perfex CRM, or click <strong>Sync Perfex Invoice</strong> on any client below.
                     @else
-                        In Perfex CRM (<code>{{ $perfexUrl }}</code>) &rarr; <strong>API / Rest API &rarr; API Management</strong>, create a token with Customers &amp; Invoices permissions, then add <code>PERFEX_API_TOKEN=your_token</code> to <code>.env</code> and run <code>php artisan optimize:clear</code>.
+                        Upload <code>extras/perfex-module/q4i_api.zip</code> in Perfex CRM (<code>{{ $perfexUrl }}</code>) &rarr; <strong>Setup &rarr; Modules</strong>, activate <strong>Q4I Comms API Bridge</strong>, open <strong>Q4I API</strong> in Perfex sidebar, copy the generated token into <code>PERFEX_API_TOKEN</code> in <code>.env</code>, and run <code>php artisan optimize:clear</code>.
                     @endif
                 </p>
             </div>

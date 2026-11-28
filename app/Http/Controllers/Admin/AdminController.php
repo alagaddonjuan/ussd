@@ -467,6 +467,33 @@ class AdminController extends Controller
         return response()->json($at->getApplicationBalance());
     }
 
+    public function ussdLogDetails(UssdLog $ussdLog): JsonResponse
+    {
+        $ussdLog->load('client');
+        $billed = $ussdLog->effectiveBilled();
+        $upstream = (float) ($ussdLog->upstream_cost ?? 0);
+
+        return response()->json([
+            'id' => $ussdLog->id,
+            'is_admin' => true,
+            'client_name' => $ussdLog->client?->name ?? 'N/A',
+            'date' => optional($ussdLog->created_at)->format('F j, Y g:i A') ?: '—',
+            'service_code' => $ussdLog->service_code ?: '—',
+            'phone_number' => $ussdLog->phone_number ?: '—',
+            'carrier' => $ussdLog->network_name ?: '—',
+            'hops' => (int) ($ussdLog->hops ?? 1),
+            'duration' => $ussdLog->duration_ms !== null ? round($ussdLog->duration_ms / 1000).'s' : '—',
+            'status' => $ussdLog->status ?: 'Success',
+            'session_id' => $ussdLog->session_id ?: '—',
+            'billed' => '₦'.number_format($billed, 2),
+            'upstream' => '₦'.number_format($upstream, 2),
+            'margin' => '₦'.number_format($ussdLog->margin(), 2),
+            'reconciled' => $ussdLog->isReconciled(),
+            'gateway_error' => $ussdLog->gateway_error ?: 'None',
+            'hops_trace' => $ussdLog->normalizedHopsTrace(),
+        ]);
+    }
+
     public function reconcileAtCsv(Request $request, UssdReconciliationService $reconciler): RedirectResponse
     {
         $data = $request->validate([

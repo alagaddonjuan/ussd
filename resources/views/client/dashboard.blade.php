@@ -201,6 +201,7 @@
                             <th class="px-4 py-3 text-start">Input Path</th>
                             <th class="px-4 py-3 text-start">Cost</th>
                             <th class="px-4 py-3 text-start">Time</th>
+                            <th class="px-4 py-3 text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="dash-recent-ussd-tbody">
@@ -250,6 +251,7 @@
         </div>
     </div>
 </div>
+@include('partials._ussd-session-details-modal')
 @endsection
 
 @push('page-js')

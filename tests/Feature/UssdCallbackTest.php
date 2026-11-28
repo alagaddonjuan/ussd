@@ -545,4 +545,101 @@ class UssdCallbackTest extends TestCase
             'outcome' => 'error:unknown_client',
         ]);
     }
+
+    public function test_multi_hop_session_records_hops_trace_and_client_details_endpoint_enforces_ownership(): void
+    {
+        $clientA = Client::create([
+            'name' => 'Trace Owner Client',
+            'email' => 'trace-owner@example.com',
+            'password' => Hash::make('Password123!'),
+            'ussd_code' => '*347*901#',
+            'token_balance' => 500,
+            'status' => 'active',
+        ]);
+
+        $clientB = Client::create([
+            'name' => 'Other Active Client',
+            'email' => 'trace-other@example.com',
+            'password' => Hash::make('Password123!'),
+            'ussd_code' => '*347*902#',
+            'token_balance' => 500,
+            'status' => 'active',
+        ]);
+
+        $menu = UssdMenu::create([
+            'client_id' => $clientA->id,
+            'menu_name' => 'Trace Flow',
+            'is_active' => true,
+            'is_archived' => false,
+        ]);
+
+        $root = UssdMenuItem::create([
+            'menu_id' => $menu->id,
+            'parent_item_id' => null,
+            'option_trigger' => 'ROOT',
+            'response_type' => 'CON',
+            'response_text' => 'Welcome: 1. Check Balance',
+        ]);
+
+        UssdMenuItem::create([
+            'menu_id' => $menu->id,
+            'parent_item_id' => $root->id,
+            'option_trigger' => '1',
+            'response_type' => 'END',
+            'response_text' => 'Your balance is 100',
+        ]);
+
+        $this->post('/ussd', [
+            'sessionId' => 'AT-HOP-TRACE-1',
+            'serviceCode' => '*347*901#',
+            'phoneNumber' => '+2348012345678',
+            'networkCode' => '62130',
+            'text' => '',
+        ])->assertOk()->assertSee('CON Welcome: 1. Check Balance');
+
+        $this->post('/ussd', [
+            'sessionId' => 'AT-HOP-TRACE-1',
+            'serviceCode' => '*347*901#',
+            'phoneNumber' => '+2348012345678',
+            'networkCode' => '62130',
+            'text' => '1',
+        ])->assertOk()->assertSee('END Your balance is 100');
+
+        $this->post('/ussd/events', [
+            'sessionId' => 'AT-HOP-TRACE-1',
+            'serviceCode' => '*347*901#',
+            'phoneNumber' => '+2348012345678',
+            'status' => 'Success',
+            'durationInMillis' => '12000',
+            'cost' => 'NGN 7.5000',
+        ])->assertOk();
+
+        $log = UssdLog::query()->where('session_id', 'AT-HOP-TRACE-1')->firstOrFail();
+
+        $this->assertSame(2, (int) $log->hops);
+        $this->assertIsArray($log->hops_trace);
+        $this->assertCount(2, $log->hops_trace);
+        $this->assertSame('Dialed *347*901#', $log->hops_trace[0]['input']);
+        $this->assertSame('CON Welcome: 1. Check Balance', $log->hops_trace[0]['app_response']);
+        $this->assertSame('1', $log->hops_trace[1]['input']);
+        $this->assertSame('END Your balance is 100', $log->hops_trace[1]['app_response']);
+        $this->assertSame('Success', $log->hops_trace[1]['status']);
+
+        $this->actingAs($clientA)->getJson("/ussd-menus/logs/{$log->id}")
+            ->assertOk()
+            ->assertJson([
+                'id' => $log->id,
+                'is_admin' => false,
+                'session_id' => 'AT-HOP-TRACE-1',
+                'status' => 'Success',
+            ])
+            ->assertJsonCount(2, 'hops_trace')
+            ->assertJsonMissingPath('upstream')
+            ->assertJsonMissingPath('margin')
+            ->assertDontSee("Africa's Talking");
+
+        // Another active client must not view another client's USSD session trace
+        $this->actingAs($clientB)->getJson("/ussd-menus/logs/{$log->id}")
+            ->assertForbidden();
+    }
 }

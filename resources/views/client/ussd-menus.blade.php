@@ -114,6 +114,7 @@
                         <th class="px-4 py-3 text-start">Input Path</th>
                         <th class="px-4 py-3 text-start">Cost</th>
                         <th class="px-4 py-3 text-start">Status</th>
+                        <th class="px-4 py-3 text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="client-ussd-logs-tbody">
@@ -123,6 +124,7 @@
         </div>
     </div>
 </div>
+@include('partials._ussd-session-details-modal')
 @endsection
 
 @push('page-js')

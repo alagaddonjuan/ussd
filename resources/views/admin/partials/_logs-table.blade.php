@@ -212,18 +212,26 @@
                     </td>
                     <td class="px-2.5 py-2.5 text-end text-xs whitespace-nowrap">
                         <div class="text-n100">{{ optional($log->created_at)->format('M d, H:i') }}</div>
-                        @if (! $reconciled || $billed <= 0)
+                        <div class="mt-1 flex items-center justify-end gap-1">
                             <button type="button"
-                                class="btn-outline py-0.5 px-2 mt-1 text-[10px] js-open-reconcile"
-                                data-action="{{ route('admin.logs.reconcile-single', $log) }}"
-                                data-session="{{ $log->session_id ?: ('Log #' . $log->id) }}"
-                                data-phone="{{ $log->phone_number }}"
-                                data-at-cost="{{ $up > 0 ? number_format($up, 2, '.', '') : number_format($estAt, 2, '.', '') }}"
-                                data-status="{{ $log->status ?: 'Success' }}"
-                                data-duration="{{ $log->duration_ms !== null ? (int) round($log->duration_ms / 1000) : '' }}">
-                                Reconcile
+                                class="btn-outline py-0.5 px-2 text-[10px] js-view-ussd-details"
+                                data-details-url="{{ route('admin.logs.details', $log) }}"
+                                title="View full USSD session & hop details">
+                                <i class="las la-ellipsis-h"></i> Details
                             </button>
-                        @endif
+                            @if (! $reconciled || $billed <= 0)
+                                <button type="button"
+                                    class="btn-outline py-0.5 px-2 text-[10px] js-open-reconcile"
+                                    data-action="{{ route('admin.logs.reconcile-single', $log) }}"
+                                    data-session="{{ $log->session_id ?: ('Log #' . $log->id) }}"
+                                    data-phone="{{ $log->phone_number }}"
+                                    data-at-cost="{{ $up > 0 ? number_format($up, 2, '.', '') : number_format($estAt, 2, '.', '') }}"
+                                    data-status="{{ $log->status ?: 'Success' }}"
+                                    data-duration="{{ $log->duration_ms !== null ? (int) round($log->duration_ms / 1000) : '' }}">
+                                    Reconcile
+                                </button>
+                            @endif
+                        </div>
                     </td>
                 </tr>
             @empty

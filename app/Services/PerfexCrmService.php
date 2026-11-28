@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Client;
 use App\Models\Transaction;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
 class PerfexCrmService
@@ -60,20 +61,14 @@ class PerfexCrmService
             return ['ok' => false, 'customers' => [], 'message' => 'Perfex CRM API token is not configured in .env.'];
         }
 
-        $baseUrl = rtrim((string) config('services.perfex.url'), '/');
-        $token = (string) config('services.perfex.api_token');
-
         try {
-            $res = Http::withHeaders(['Authtoken' => $token])
-                ->acceptJson()
-                ->timeout(12)
-                ->get("{$baseUrl}/api/customers");
+            $res = $this->requestPerfex('GET', 'customers');
 
             if (! $res->successful()) {
                 return [
                     'ok' => false,
                     'customers' => [],
-                    'message' => $this->formatApiError($res->status(), $res->json(), $res->body(), 'customers'),
+                    'message' => $this->formatApiError($res->status(), $res->json() ?: [], $res->body(), 'customers'),
                 ];
             }
 
@@ -100,20 +95,15 @@ class PerfexCrmService
             return ['ok' => false, 'invoices' => [], 'message' => 'Perfex CRM API token is not configured in .env.'];
         }
 
-        $baseUrl = rtrim((string) config('services.perfex.url'), '/');
-        $token = (string) config('services.perfex.api_token');
-
         try {
-            $res = Http::withHeaders(['Authtoken' => $token])
-                ->acceptJson()
-                ->timeout(12)
-                ->get("{$baseUrl}/api/invoices");
+            $query = ($perfexClientId !== null && $perfexClientId > 0) ? ['clientid' => $perfexClientId] : [];
+            $res = $this->requestPerfex('GET', 'invoices', $query);
 
             if (! $res->successful()) {
                 return [
                     'ok' => false,
                     'invoices' => [],
-                    'message' => $this->formatApiError($res->status(), $res->json(), $res->body(), 'invoices'),
+                    'message' => $this->formatApiError($res->status(), $res->json() ?: [], $res->body(), 'invoices'),
                 ];
             }
 
@@ -177,22 +167,15 @@ class PerfexCrmService
             return ['ok' => true, 'customer_id' => (int) $client->perfex_client_id, 'message' => 'Mapped existing Perfex customer.'];
         }
 
-        $baseUrl = rtrim((string) config('services.perfex.url'), '/');
-        $token = (string) config('services.perfex.api_token');
-
         try {
-            $searchUrls = array_filter([
-                $client->email ? "{$baseUrl}/api/contacts/search/".rawurlencode($client->email) : null,
-                $client->name ? "{$baseUrl}/api/customers/search/".rawurlencode($client->name) : null,
-                $client->email ? "{$baseUrl}/api/customers/search/".rawurlencode($client->email) : null,
+            $searchPaths = array_filter([
+                $client->email ? 'contacts/search/'.rawurlencode($client->email) : null,
+                $client->name ? 'customers/search/'.rawurlencode($client->name) : null,
+                $client->email ? 'customers/search/'.rawurlencode($client->email) : null,
             ]);
 
-            foreach ($searchUrls as $searchUrl) {
-                $search = Http::withHeaders(['Authtoken' => $token])
-                    ->acceptJson()
-                    ->timeout(10)
-                    ->get($searchUrl);
-
+            foreach ($searchPaths as $path) {
+                $search = $this->requestPerfex('GET', $path);
                 if ($search->successful()) {
                     $rows = $this->extractListPayload($search->json());
                     $customerId = (int) ($rows[0]['userid'] ?? $rows[0]['id'] ?? 0);
@@ -212,20 +195,7 @@ class PerfexCrmService
                 'active' => $client->status === 'active' ? 1 : 0,
             ];
 
-            // Perfex CRM REST API expects form-encoded payloads; fall back to JSON if needed.
-            $created = Http::withHeaders(['Authtoken' => $token])
-                ->acceptJson()
-                ->asForm()
-                ->timeout(10)
-                ->post("{$baseUrl}/api/customers", $customerPayload);
-
-            if (! $created->successful() && in_array($created->status(), [400, 415], true)) {
-                $created = Http::withHeaders(['Authtoken' => $token])
-                    ->acceptJson()
-                    ->timeout(10)
-                    ->post("{$baseUrl}/api/customers", $customerPayload);
-            }
-
+            $created = $this->requestPerfex('POST', 'customers', $customerPayload);
             $payload = $created->json() ?: [];
             $customerId = (int) ($payload['data']['userid'] ?? $payload['userid'] ?? $payload['id'] ?? 0);
 
@@ -275,10 +245,8 @@ class PerfexCrmService
             ];
         }
 
-        $baseUrl = rtrim((string) config('services.perfex.url'), '/');
-        $token = (string) config('services.perfex.api_token');
         $rate = round($amount, 2);
-        $invoiceNumber = $this->nextInvoiceNumber($baseUrl, $token);
+        $invoiceNumber = $this->nextInvoiceNumber();
         $paymentMode = (string) config('services.perfex.payment_mode', '1');
 
         $invoicePayload = [
@@ -304,19 +272,7 @@ class PerfexCrmService
         ];
 
         try {
-            $response = Http::withHeaders(['Authtoken' => $token])
-                ->acceptJson()
-                ->asForm()
-                ->timeout(12)
-                ->post("{$baseUrl}/api/invoices", $invoicePayload);
-
-            if (! $response->successful() && in_array($response->status(), [400, 415], true)) {
-                $response = Http::withHeaders(['Authtoken' => $token])
-                    ->acceptJson()
-                    ->timeout(12)
-                    ->post("{$baseUrl}/api/invoices", $invoicePayload);
-            }
-
+            $response = $this->requestPerfex('POST', 'invoices', $invoicePayload);
             $payload = $response->json() ?: [];
             $invoiceId = (string) ($payload['data']['id'] ?? $payload['invoice_id'] ?? $payload['id'] ?? '');
 
@@ -342,14 +298,75 @@ class PerfexCrmService
         }
     }
 
-    protected function nextInvoiceNumber(string $baseUrl, string $token): int
+    /**
+     * Send an HTTP request to Perfex CRM, supporting both configured prefix (e.g. q4i_api/api)
+     * and automatic 404 fallback from /api/* to /q4i_api/api/*.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function requestPerfex(string $method, string $relativePath, array $data = []): Response
     {
-        try {
+        $baseUrl = rtrim((string) config('services.perfex.url'), '/');
+        $token = (string) config('services.perfex.api_token');
+        $configuredPrefix = trim((string) config('services.perfex.api_prefix', ''), '/');
+
+        $prefixes = $configuredPrefix !== ''
+            ? [$configuredPrefix]
+            : ['api', 'q4i_api/api'];
+
+        $lastResponse = null;
+
+        foreach ($prefixes as $prefix) {
+            $path = $this->translatePathForPrefix($relativePath, $prefix);
+            $url = "{$baseUrl}/{$prefix}/{$path}";
+
+            $lastResponse = $this->sendSingleRequest($method, $url, $token, $data);
+            if ($lastResponse->status() !== 404) {
+                return $lastResponse;
+            }
+        }
+
+        return $lastResponse;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function sendSingleRequest(string $method, string $url, string $token, array $data): Response
+    {
+        $pending = Http::withHeaders(['Authtoken' => $token])
+            ->acceptJson()
+            ->timeout(12);
+
+        if (strtoupper($method) === 'GET') {
+            return $pending->get($url, $data);
+        }
+
+        $res = $pending->asForm()->post($url, $data);
+        if (! $res->successful() && in_array($res->status(), [400, 415], true)) {
             $res = Http::withHeaders(['Authtoken' => $token])
                 ->acceptJson()
-                ->timeout(6)
-                ->get("{$baseUrl}/api/invoices");
+                ->timeout(12)
+                ->post($url, $data);
+        }
 
+        return $res;
+    }
+
+    protected function translatePathForPrefix(string $relativePath, string $prefix): string
+    {
+        $clean = ltrim($relativePath, '/');
+        if (str_contains($prefix, 'q4i_api')) {
+            $clean = str_replace(['customers/search/', 'contacts/search/'], ['customers_search/', 'contacts_search/'], $clean);
+        }
+
+        return $clean;
+    }
+
+    protected function nextInvoiceNumber(): int
+    {
+        try {
+            $res = $this->requestPerfex('GET', 'invoices');
             if ($res->successful()) {
                 $rows = $this->extractListPayload($res->json());
                 $maxNum = 0;

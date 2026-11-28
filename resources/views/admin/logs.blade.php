@@ -377,6 +377,7 @@
         </form>
     </div>
 </div>
+@include('partials._ussd-session-details-modal')
 @endsection
 
 @push('page-js')
